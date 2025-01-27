@@ -89,13 +89,31 @@ def handle_lines_input(option_name: str) -> List[Rhino.Geometry.Line]:
     return []
 
 
+# General handler for mesh input
+def handle_mesh_input(option_name: str) -> List[Rhino.Geometry.Mesh]:
+    go = Rhino.Input.Custom.GetObject()
+    go.SetCommandPrompt(f"Select {option_name}")
+    go.GeometryFilter = Rhino.DocObjects.ObjectType.Mesh  # Filter to curves
+    go.EnablePreSelect(True, True)
+    go.SubObjectSelect = False
+    go.DeselectAllBeforePostSelect = False
+    res = go.GetMultiple(1, 0)
+
+    if go.CommandResult() == Rhino.Commands.Result.Success:
+        selected_meshes = [go.Object(i).Mesh() for i in range(go.ObjectCount) if go.Object(i).Mesh()]
+        return selected_meshes
+    return []
+
+
+
+
 # Main method that processes input types based on the input dictionary
 def generalized_input_method(
     dataset_name: str,
     input_dict: Dict[
         str,
         Tuple[
-            Union[float, int, List[float], List[int], List[Rhino.Geometry.Line], List[Rhino.Geometry.Polyline]], type
+            Union[float, int, list[float], list[int], list[Rhino.Geometry.Line], list[Rhino.Geometry.Polyline], list[Rhino.Geometry.Mesh]], type
         ],
     ],
     callback=None,
@@ -136,6 +154,9 @@ def generalized_input_method(
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.Polyline]:  # List of polylines
             print(option_name, "list polyline")
+            get_options.AddOption(option_name)
+        elif value_type is typing.List[Rhino.Geometry.Mesh]:  # List of polylines
+            print(option_name, "list mesh")
             get_options.AddOption(option_name)
         elif value_type is Callable:
             print(option_name, "Callable")
@@ -180,6 +201,11 @@ def generalized_input_method(
                 if result:
                     input_dict[option_name] = (result, input_type)
                     Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} polylines selected.")
+            elif input_type is typing.List[Rhino.Geometry.Mesh]:  # List of Mesh
+                result = handle_mesh_input(option_name)
+                if result:
+                    input_dict[option_name] = (result, input_type)
+                    Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} meshes selected.")
             elif input_type is typing.Callable:  # External Function
                 print(input_dict[option_name])
                 input_dict[option_name][0]()

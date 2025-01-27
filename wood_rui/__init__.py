@@ -13,6 +13,7 @@ from .object import (
     add_insertion_vectors,
     add_three_valence,
     add_axes,
+    add_skeleton,
 )
 from .globals import wood_rui_globals
 from .forms import NamedValuesForm, BooleanForm
@@ -39,4 +40,5 @@ __all__ = [
     "BooleanForm",
     "generalized_input_method",
     "add_axes",
+    "add_skeleton",
 ]

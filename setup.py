@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="wood_rui",  # Name of the package
-    version="0.1.0",  # Version of the package
+    version="0.1.1",  # Version of the package
     description="A package for managing wood joinery geometries in Rhino8.",
     long_description=open("README.md").read(),  # Long description from README file
     long_description_content_type="text/markdown",

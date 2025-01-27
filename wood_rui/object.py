@@ -98,6 +98,74 @@ def add_polylines(polylines: List[Rhino.Geometry.Polyline], data_name: str, grou
     Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw()  # 0 ms
 
 
+def add_skeleton(polylines: list[Rhino.Geometry.Polyline], data_name: str, distances: list[list[float]] = [], meshes: list[Rhino.Geometry.Mesh] = [], transforms: list[Rhino.Geometry.Transform] = None) -> None:
+    """Add a list of polylines to the specified layer and return their GUIDs.
+
+    Parameters
+    ----------
+    foldername : list[Rhino.Geometry.Polyline]
+        List of polylines.
+    filename_of_dataset : str
+        Name of dataset.
+
+    """
+
+    print("add_skeleton", data_name)
+
+    layer_index = ensure_layer_exists("compas_wood", data_name, "skeleton", Color.DodgerBlue)
+
+    polyline_guids = []
+    for idx, polyline in enumerate(polylines):
+        if polyline:
+            obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddCurve(polyline.ToNurbsCurve())
+            if obj_guid:
+                obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(obj_guid)
+                if obj:
+                    obj.Attributes.LayerIndex = layer_index
+
+                    polyline_guids.append(obj_guid)
+                    obj.Attributes.SetUserString("element_id", str(int(idx * 0.5)))
+                    obj.Attributes.SetUserString("dataset", data_name)
+                    obj.Attributes.SetUserString("type", "axes")
+
+                    string_distances : str = ''.join(str(num) for num in distances[idx])
+                    obj.Attributes.SetUserString("distances", string_distances)
+
+                    if meshes:
+                        string_vertices = ""
+                        for vertex in meshes[idx].Vertices:
+                            string_vertices += str(vertex.X) + "," + str(vertex.Y) + "," + str(vertex.Z) + ","
+
+                        string_faces = ""
+                        for face in meshes[idx].Faces:
+                            string_faces += str(face.A) + "," + str(face.B) + "," + str(face.C) + ","
+
+                        obj.Attributes.SetUserString("vertices", string_vertices)
+                        obj.Attributes.SetUserString("faces", string_faces)
+
+                    if transforms:
+                        transformation_numbers = transforms[idx].ToDoubleArray(True)
+                        string_transformation = ""
+                        for number in transformation_numbers:
+                            string_transformation += str(number) + ","
+                        obj.Attributes.SetUserString("transform", string_transformation)
+
+        
+                    obj.CommitChanges()
+                else:
+                    pass
+            else:
+                pass
+
+    if "polylines_guid" in wood_rui_globals[data_name]:
+        delete_objects(wood_rui_globals[data_name]["polylines_guid"])
+    wood_rui_globals[data_name]["polylines_guid"] = polyline_guids
+    wood_rui_globals[data_name]["polylines"] = polylines
+
+    layer_index_dots = ensure_layer_exists("compas_wood", data_name, "joint_types", Color.MediumVioletRed)
+    Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw()  # 0 ms
+
+
 def add_insertion_lines(lines, data_name):
     """Add a list of polylines to the specified layer and return their GUIDs."""
 
