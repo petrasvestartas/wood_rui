@@ -117,6 +117,7 @@ def generalized_input_method(
         ],
     ],
     callback=None,
+    run_when_input_changed=True,
 ) -> None:
     get_options = Rhino.Input.Custom.GetOption()
 
@@ -212,11 +213,15 @@ def generalized_input_method(
                 Rhino.RhinoApp.WriteLine(f"External function is called {option_name}.")
 
             # Run external method to update geometry each time the input is changed.
-            callback(input_dict, dataset_name)
+            if run_when_input_changed:
+                callback(input_dict, dataset_name)
 
         elif res == Rhino.Input.GetResult.Nothing or res == Rhino.Input.GetResult.Cancel:
             Rhino.RhinoApp.WriteLine("No option selected or operation canceled. Exiting...")
             done = True  # Exit the loop by setting done to True
+        
+    if not run_when_input_changed:
+        callback(input_dict, dataset_name)
 
     # Final output and return success
     return Rhino.Commands.Result.Success

@@ -109,9 +109,6 @@ def add_skeleton(polylines: list[Rhino.Geometry.Polyline], data_name: str, dista
         Name of dataset.
 
     """
-
-    print("add_skeleton", data_name)
-
     layer_index = ensure_layer_exists("compas_wood", data_name, "skeleton", Color.DodgerBlue)
 
     polyline_guids = []
@@ -164,6 +161,99 @@ def add_skeleton(polylines: list[Rhino.Geometry.Polyline], data_name: str, dista
 
     layer_index_dots = ensure_layer_exists("compas_wood", data_name, "joint_types", Color.MediumVioletRed)
     Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw()  # 0 ms
+
+import Rhino
+import System
+from System.Drawing import Color
+from typing import List
+
+def add_element(mesh: Rhino.Geometry.Mesh, layer_name: str, cuts: List[Rhino.Geometry.Mesh], group_name_prefix: str) -> None:
+    """Add a mesh and associated polyline to the specified layer, apply attributes, and group them uniquely.
+
+    Parameters
+    ----------
+    mesh : Rhino.Geometry.Mesh
+        Mesh object that represents the element shape.
+    layer_name : str
+        Layer name where the new object will be added.
+    cuts : List[Rhino.Geometry.Mesh]
+        List of cut meshes that represent fabrication cuts.
+    group_name_prefix : str
+        The prefix for the group name (each call creates a new unique group).
+
+    """
+    layer_index = ensure_layer_exists("compas_wood", "model", layer_name, Color.Red)
+
+    if not mesh:
+        return
+
+    obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddMesh(mesh)
+    if not obj_guid:
+        return
+
+    obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(obj_guid)
+    if not obj:
+        return
+
+    obj.Attributes.LayerIndex = layer_index
+
+    # Face for transformation
+    result, p0, p1, p2, p3 = mesh.Faces.GetFaceVertices(0)
+    if not result:
+        return
+
+    origin = p0
+    x_axis = p1 - p0
+    y_axis = p2 - p0
+    plane = Rhino.Geometry.Plane(origin, x_axis, y_axis)
+    xform = Rhino.Geometry.Transform.PlaneToPlane(plane, Rhino.Geometry.Plane.WorldXY)
+    numbers = xform.ToDoubleArray(True)
+    string_numbers = ','.join(str(num) for num in numbers)
+    obj.Attributes.SetUserString("xform", string_numbers)
+
+    # Axis Length
+    length = mesh.GetBoundingBox(True).Max.Z
+    obj.Attributes.SetUserString("length", str(length))
+
+    # Cuts Storage
+    for idx, cut_mesh in enumerate(cuts):
+        opts = Rhino.FileIO.SerializationOptions()
+        opts.WriteUserData = True
+        json = cut_mesh.ToJSON(opts)
+        obj.Attributes.SetUserString(f"cut_{idx}", json)
+
+    obj.CommitChanges()
+
+    # ObjectFrame
+    attributes = obj.Attributes.Duplicate()
+    attributes.SetObjectFrame(Rhino.Geometry.Plane.WorldXY)
+    Rhino.RhinoDoc.ActiveDoc.Objects.ModifyAttributes(obj, attributes, False)
+
+    # Create Polyline for Frame
+    p0 = Rhino.Geometry.Point3d(0, 0, 0)
+    p1 = p0 + Rhino.Geometry.Vector3d.XAxis*0.01
+    p2 = p0 + Rhino.Geometry.Vector3d.YAxis*0.01
+    groupframe = Rhino.Geometry.Polyline([p1, p0, p2])
+
+    polyline_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddPolyline(groupframe)
+    if not polyline_guid:
+        return
+
+    # Find the polyline object
+    polyline_obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(polyline_guid)
+    if not polyline_obj:
+        return
+
+    # Generate a unique group name using a counter
+    group_index = Rhino.RhinoDoc.ActiveDoc.Groups.Add()
+
+    # Add objects to the new group
+    Rhino.RhinoDoc.ActiveDoc.Groups.AddToGroup(group_index, obj_guid)
+    Rhino.RhinoDoc.ActiveDoc.Groups.AddToGroup(group_index, polyline_guid)
+
+    # Redraw view
+    Rhino.RhinoDoc.ActiveDoc.Views.Redraw()
+
 
 
 def add_insertion_lines(lines, data_name):
