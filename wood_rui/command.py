@@ -16,7 +16,7 @@ def handle_string_input(option_name: str) -> str:
 
 
 # General handler for list of numbers input
-def handle_numbers_input(option_name: str) -> List[float]:
+def handle_numbers_input(option_name: str) -> list[float]:
     go = Rhino.Input.Custom.GetString()
     go.SetCommandPrompt(f"Enter {option_name} as comma-separated values (e.g., 0.0, 1.0, 2.5)")
 
@@ -33,7 +33,7 @@ def handle_numbers_input(option_name: str) -> List[float]:
 
 
 # General handler for list of integers input
-def handle_integers_input(option_name: str) -> List[int]:
+def handle_integers_input(option_name: str) -> list[int]:
     go = Rhino.Input.Custom.GetString()
     go.SetCommandPrompt(f"Enter {option_name} as comma-separated integers (e.g., 1, 2, 3)")
 
@@ -50,7 +50,7 @@ def handle_integers_input(option_name: str) -> List[int]:
 
 
 # General handler for polylines input
-def handle_polylines_input(option_name: str) -> List[Rhino.Geometry.Polyline]:
+def handle_polylines_input(option_name: str) -> list[Rhino.Geometry.Polyline]:
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
     go.GeometryFilter = Rhino.DocObjects.ObjectType.Curve  # Filter to curves
@@ -73,7 +73,7 @@ def handle_polylines_input(option_name: str) -> List[Rhino.Geometry.Polyline]:
 
 
 # General handler for lines input
-def handle_lines_input(option_name: str) -> List[Rhino.Geometry.Line]:
+def handle_lines_input(option_name: str) -> list[Rhino.Geometry.Line]:
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
     go.GeometryFilter = Rhino.DocObjects.ObjectType.Curve  # Filter to curves
@@ -90,7 +90,7 @@ def handle_lines_input(option_name: str) -> List[Rhino.Geometry.Line]:
 
 
 # General handler for mesh input
-def handle_mesh_input(option_name: str) -> List[Rhino.Geometry.Mesh]:
+def handle_mesh_input(option_name: str) -> list[Rhino.Geometry.Mesh]:
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
     go.GeometryFilter = Rhino.DocObjects.ObjectType.Mesh  # Filter to curves
@@ -105,6 +105,20 @@ def handle_mesh_input(option_name: str) -> List[Rhino.Geometry.Mesh]:
     return []
 
 
+# General handler for brep input
+def handle_brep_input(option_name: str) -> list[Rhino.Geometry.Brep]:
+    go = Rhino.Input.Custom.GetObject()
+    go.SetCommandPrompt(f"Select {option_name}")
+    go.GeometryFilter = Rhino.DocObjects.ObjectType.Brep  # Filter to curves
+    go.EnablePreSelect(True, True)
+    go.SubObjectSelect = False
+    go.DeselectAllBeforePostSelect = False
+    res = go.GetMultiple(1, 0)
+
+    if go.CommandResult() == Rhino.Commands.Result.Success:
+        selected_meshes = [go.Object(i).Brep() for i in range(go.ObjectCount) if go.Object(i).Brep()]
+        return selected_meshes
+    return []
 
 
 # Main method that processes input types based on the input dictionary
@@ -113,7 +127,7 @@ def generalized_input_method(
     input_dict: Dict[
         str,
         Tuple[
-            Union[float, int, list[float], list[int], list[Rhino.Geometry.Line], list[Rhino.Geometry.Polyline], list[Rhino.Geometry.Mesh]], type
+            Union[float, int, list[float], list[int], list[Rhino.Geometry.Line], list[Rhino.Geometry.Polyline], list[Rhino.Geometry.Mesh], list[Rhino.Geometry.Brep]], type
         ],
     ],
     callback=None,
@@ -141,7 +155,6 @@ def generalized_input_method(
         elif value_type is bool:
             print(option_name, "bool")
             dict_options[option_name] = Rhino.Input.Custom.OptionToggle(default_value, "Yes", "No")
-            print(dict_options[option_name].CurrentValue)
             dict_values[option_name] = dict_options[option_name].CurrentValue
             get_options.AddOptionToggle(option_name, dict_options[option_name])
         elif value_type is typing.List[float]:  # List of floats
@@ -158,6 +171,9 @@ def generalized_input_method(
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.Mesh]:  # List of polylines
             print(option_name, "list mesh")
+            get_options.AddOption(option_name)
+        elif value_type is typing.List[Rhino.Geometry.Brep]:  # List of polylines
+            print(option_name, "list brep")
             get_options.AddOption(option_name)
         elif value_type is Callable:
             print(option_name, "Callable")
@@ -207,6 +223,11 @@ def generalized_input_method(
                 if result:
                     input_dict[option_name] = (result, input_type)
                     Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} meshes selected.")
+            elif input_type is typing.List[Rhino.Geometry.Brep]:  # List of Mesh
+                result = handle_brep_input(option_name)
+                if result:
+                    input_dict[option_name] = (result, input_type)
+                    Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} breps selected.")
             elif input_type is typing.Callable:  # External Function
                 print(input_dict[option_name])
                 input_dict[option_name][0]()
