@@ -1,4 +1,24 @@
 import Rhino
+import rhinoscriptsyntax as rs
+import itertools
+
+def polyline_obj_to_plane(polyline_obj):
+    polyline_curve = polyline_obj.Geometry
+    if polyline_curve.PointCount == 3:  # Ensure it has exactly 3 points
+        polyline = polyline_curve.ToPolyline()
+        origin = polyline[1]
+        x_axis = polyline[0] - polyline[1]
+        y_axis = polyline[2] - polyline[1]  # Corrected y-axis calculation
+        return Rhino.Geometry.Plane(origin, x_axis, y_axis)
+    return Rhino.Geometry.Plane.Unset
+
+def polyline_to_plane(polyline):
+    if polyline.Count == 5:  # Ensure it has exactly 3 points
+        origin = polyline[1]
+        x_axis = polyline[0] - polyline[1]
+        y_axis = polyline[2] - polyline[1]  # Corrected y-axis calculation
+        return Rhino.Geometry.Plane(origin, x_axis, y_axis)
+    return Rhino.Geometry.Plane.Unset
 
 def find_valid_groups():
     """Finds groups in Rhino that contain exactly two objects, where one is a polyline with three points.
@@ -54,7 +74,7 @@ def find_valid_groups():
     return valid_groups
 
 
-def select_and_find_valid_groups():
+def select_and_find_valid_groups(option_name):
     """Finds groups in Rhino that contain exactly two objects, where one is a polyline with three points.
     
     Returns
@@ -67,7 +87,7 @@ def select_and_find_valid_groups():
     valid_groups = []
 
     # Select objects
-    objs = rs.GetObjects("Select objects")
+    objs = rs.GetObjects(f"Select {option_name}")
     if not objs:
         print("No objects selected.")
         return
@@ -103,21 +123,12 @@ def select_and_find_valid_groups():
         if polyline_obj and other_obj:
             polyline_curve = polyline_obj.Geometry
             if polyline_curve.PointCount == 3:  # Ensure it has exactly 3 points
-                polyline = polyline_curve.ToPolyline()
-                origin = polyline[1]
-                x_axis = polyline[0] - polyline[1]
-                y_axis = polyline[2] - polyline[1]  # Corrected y-axis calculation
-                plane = Rhino.Geometry.Plane(origin, x_axis, y_axis)
 
-                # Store only the non-polyline object and its associated plane
-                valid_groups.append((other_obj, plane))
+                valid_groups.append((other_obj, polyline_obj))
 
     return valid_groups
 
 
-
-import rhinoscriptsyntax as rs
-import itertools
 def build_universal_group_dict(selected_objects):
     group_dict = {}
     object_group_map = {}  
@@ -171,6 +182,7 @@ def build_universal_group_dict(selected_objects):
 
     return group_dict, object_group_map, group_object_map
 
+
 def compute_shared_elements(object_group_map):
     shared_dict = {}
     for obj, groups in object_group_map.items():
@@ -181,6 +193,7 @@ def compute_shared_elements(object_group_map):
                     shared_dict[combo] = set()
                 shared_dict[combo].add(obj)
     return shared_dict
+
 
 def print_universal_structure(group_dict, shared_dict):
     print("Universal Group Structure:")
@@ -201,6 +214,7 @@ def print_universal_structure(group_dict, shared_dict):
     else:
         print("No shared elements found among groups.")
 
+
 def infer_group_hierarchy(group_dict):
     inferred_parents = {}
     groups = list(group_dict.keys())
@@ -220,6 +234,7 @@ def infer_group_hierarchy(group_dict):
             inferred_parents[group] = parent
     return inferred_parents
 
+
 def build_inferred_tree(inferred_parents):
     tree = {group: {"children": []} for group in inferred_parents}
     roots = []
@@ -230,10 +245,12 @@ def build_inferred_tree(inferred_parents):
             roots.append(group)
     return roots, tree
 
+
 def print_inferred_tree(tree, node, group_dict, indent=0):
     print(" " * indent + "- " + node + " (" + group_dict[node]['name'] + ")")
     for child in sorted(tree[node]["children"]):
         print_inferred_tree(tree, child, group_dict, indent + 4)
+
 
 def select_group_tree():
     objs = rs.GetObjects("Select objects")

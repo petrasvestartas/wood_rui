@@ -18,7 +18,23 @@ from .object import (
 )
 from .globals import wood_rui_globals
 from .forms import NamedValuesForm, BooleanForm
-from .command import generalized_input_method
+from .command import (
+    generalized_input_method,
+    handle_string_input,
+    handle_numbers_input,
+    handle_integers_input,
+    handle_polylines_input,
+    handle_lines_input,
+    handle_mesh_input,
+    handle_brep_input,
+    handle_solid_input
+
+)
+from .groups import (
+    select_and_find_valid_groups,
+    polyline_obj_to_plane,
+    polyline_to_plane
+)
 
 __all__ = [
     "ensure_layer_exists",
@@ -43,4 +59,14 @@ __all__ = [
     "add_axes",
     "add_skeleton",
     "add_element",
+    "select_and_find_valid_groups",
+    "handle_string_input",
+    "handle_numbers_input",
+    "handle_integers_input",
+    "handle_polylines_input",
+    "handle_lines_input",
+    "handle_mesh_input",
+    "handle_brep_input",
+    "handle_solid_input",
+    "polyline_obj_to_plane"
 ]

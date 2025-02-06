@@ -121,6 +121,22 @@ def handle_brep_input(option_name: str) -> list[Rhino.Geometry.Brep]:
     return []
 
 
+def handle_solid_input(option_name: str) -> Tuple[list[Rhino.Geometry.Brep], list[Rhino.Geometry.Mesh]]:
+    go = Rhino.Input.Custom.GetObject()
+    go.SetCommandPrompt(f"Select {option_name}")
+    go.GeometryFilter = Rhino.DocObjects.ObjectType.Brep | Rhino.DocObjects.ObjectType.Mesh  # Filter to Breps and Meshes
+    go.EnablePreSelect(True, True)
+    go.SubObjectSelect = False
+    go.DeselectAllBeforePostSelect = False
+    res = go.GetMultiple(1, 0)
+
+    if go.CommandResult() == Rhino.Commands.Result.Success:
+        selected_breps = [go.Object(i).Brep() for i in range(go.ObjectCount) if go.Object(i).Brep()]
+        selected_meshes = [go.Object(i).Mesh() for i in range(go.ObjectCount) if go.Object(i).Mesh()]
+        return selected_breps + selected_meshes
+    return []
+
+
 # Main method that processes input types based on the input dictionary
 def generalized_input_method(
     dataset_name: str,
