@@ -4,6 +4,82 @@ from typing import *
 from System.Drawing import Color  # Import Color from System.Drawing
 from Rhino import RhinoMath
 
+def add_sub_layer(
+    layer_index_or_rhino_object: Union[int, Rhino.DocObjects.RhinoObject], sub_layer_name: str, geometries : list[any], colors: list[Color] = None, delete_existing: bool = False
+) -> int:
+    """Add geometry to a sub-layer of the specified layer.
+
+    Parameters
+    ----------
+    layer_index_or_rhino_object : int or RhinoObject
+        The index of the layer or the RhinoObject to add to the sub-layer
+    sub_layer_name : str
+        The name of the sub-layer.
+    geometry : any
+        The geometry to add to the sub-layer.
+    color : Color, optional
+        The color of the sub-layer.  
+    delete_existing : bool, optional
+        True to delete existing objects in the sub-layer.
+
+    """
+
+    # Find current layer of object
+    layer_index = -1
+    if isinstance(layer_index_or_rhino_object, int):
+        layer_index = layer_index_or_rhino_object
+    elif isinstance(layer_index_or_rhino_object, Rhino.DocObjects.RhinoObject):
+        layer_index = layer_index = layer_index_or_rhino_object.Attributes.LayerIndex
+    
+    if layer_index == -1:
+        print("Layer not found. No object is added to rhino.")
+        return
+
+    # Now create the full path for the case (second-level) layer
+    new_layer_name = Rhino.RhinoDoc.ActiveDoc.Layers[layer_index].FullPath + "::" + sub_layer_name
+    new_layer_index = Rhino.RhinoDoc.ActiveDoc.Layers.FindByFullPath(new_layer_name, True)
+    
+    if new_layer_index < 0:
+        # Create the case layer under the plugin layer
+        layer = Rhino.DocObjects.Layer()
+        layer.Name = sub_layer_name
+        layer.ParentLayerId = Rhino.RhinoDoc.ActiveDoc.Layers[layer_index].Id
+        layer.Color = System.Drawing.Color.Black
+        new_layer_index = Rhino.RhinoDoc.ActiveDoc.Layers.Add(layer)
+
+    obj_ids = []
+    if geometries:
+        for idx, geometry in enumerate(geometries):
+            # Create object attributes and assign layer index           
+            obj_id = Rhino.RhinoDoc.ActiveDoc.Objects.Add(geometry)
+            obj_ids.append(obj_id)
+            obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(obj_id)
+
+            attributes = obj.Attributes.Duplicate()
+            attributes.LayerIndex = new_layer_index
+
+            if colors:
+                attributes.ObjectColor = colors[idx%len(colors)]
+                attributes.ColorSource = Rhino.DocObjects.ObjectColorSource.ColorFromObject
+
+            Rhino.RhinoDoc.ActiveDoc.Objects.ModifyAttributes(obj, attributes, True)
+
+            obj.CommitChanges()
+
+        # Group all arrows
+        if all(obj_ids):
+            group_index = Rhino.RhinoDoc.ActiveDoc.Groups.Add()
+            for id in obj_ids:
+                Rhino.RhinoDoc.ActiveDoc.Groups.AddToGroup(group_index, obj_ids)
+
+
+    if delete_existing:
+        delete_objects_in_layer(new_layer_index)
+
+    Rhino.RhinoDoc.ActiveDoc.Views.Redraw()
+
+    return new_layer_index
+
 
 def ensure_layer_exists(
     plugin_name: str, data_name: str, type_name: str, color: Color = None, delete_existing: bool = False

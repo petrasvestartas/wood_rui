@@ -1,4 +1,8 @@
-from .layer import ensure_layer_exists, get_objects_by_layer, delete_objects_in_layer
+from .layer import (
+    ensure_layer_exists, 
+    get_objects_by_layer, 
+    delete_objects_in_layer, 
+    add_sub_layer)
 from .object import (
     delete_objects,
     add_polylines,
@@ -40,6 +44,7 @@ __all__ = [
     "ensure_layer_exists",
     "get_objects_by_layer",
     "delete_objects_in_layer",
+    "add_sub_layer",
     "delete_objects",
     "add_polylines",
     "add_mesh",
@@ -68,5 +73,6 @@ __all__ = [
     "handle_mesh_input",
     "handle_brep_input",
     "handle_solid_input",
-    "polyline_obj_to_plane"
+    "polyline_obj_to_plane",
+    "polyline_to_plane"
 ]

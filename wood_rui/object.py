@@ -258,6 +258,7 @@ def add_element(
 
     # Features
     for idx, feature in enumerate(features):
+        print("____________", feature)
         if isinstance(feature, Rhino.Geometry.Mesh):
             opts = Rhino.FileIO.SerializationOptions()
             opts.WriteUserData = True

@@ -50,7 +50,7 @@ def handle_integers_input(option_name: str) -> list[int]:
 
 
 # General handler for polylines input
-def handle_polylines_input(option_name: str) -> list[Rhino.Geometry.Polyline]:
+def handle_polylines_input(option_name: str, hide : bool = True) -> list[Rhino.Geometry.Polyline]:
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
     go.GeometryFilter = Rhino.DocObjects.ObjectType.Curve  # Filter to curves
@@ -73,7 +73,7 @@ def handle_polylines_input(option_name: str) -> list[Rhino.Geometry.Polyline]:
 
 
 # General handler for lines input
-def handle_lines_input(option_name: str) -> list[Rhino.Geometry.Line]:
+def handle_lines_input(option_name: str, hide : bool = True) -> list[Rhino.Geometry.Line]:
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
     go.GeometryFilter = Rhino.DocObjects.ObjectType.Curve  # Filter to curves
@@ -90,23 +90,34 @@ def handle_lines_input(option_name: str) -> list[Rhino.Geometry.Line]:
 
 
 # General handler for mesh input
-def handle_mesh_input(option_name: str) -> list[Rhino.Geometry.Mesh]:
+def handle_mesh_input(option_name: str, hide: bool = True) -> list[Rhino.Geometry.Mesh]:
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
-    go.GeometryFilter = Rhino.DocObjects.ObjectType.Mesh  # Filter to curves
+    go.GeometryFilter = Rhino.DocObjects.ObjectType.Mesh  # Filter to meshes
     go.EnablePreSelect(True, True)
     go.SubObjectSelect = False
     go.DeselectAllBeforePostSelect = False
     res = go.GetMultiple(1, 0)
 
     if go.CommandResult() == Rhino.Commands.Result.Success:
-        selected_meshes = [go.Object(i).Mesh() for i in range(go.ObjectCount) if go.Object(i).Mesh()]
+        selected_meshes = []
+        for i in range(go.ObjectCount):
+            rhino_obj = go.Object(i).Object()  # Get the RhinoObject
+            
+            if hide:
+                Rhino.RhinoDoc.ActiveDoc.Objects.Hide(rhino_obj.Id, True)
+            
+            if rhino_obj and rhino_obj.Geometry and isinstance(rhino_obj.Geometry, Rhino.Geometry.Mesh):
+                selected_meshes.append(rhino_obj.Geometry)
+        
+        Rhino.RhinoDoc.ActiveDoc.Views.Redraw()  # Refresh view after hiding objects
         return selected_meshes
+
     return []
 
 
 # General handler for brep input
-def handle_brep_input(option_name: str) -> list[Rhino.Geometry.Brep]:
+def handle_brep_input(option_name: str, hide : bool = True) -> list[Rhino.Geometry.Brep]:
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
     go.GeometryFilter = Rhino.DocObjects.ObjectType.Brep  # Filter to curves
@@ -116,12 +127,25 @@ def handle_brep_input(option_name: str) -> list[Rhino.Geometry.Brep]:
     res = go.GetMultiple(1, 0)
 
     if go.CommandResult() == Rhino.Commands.Result.Success:
-        selected_meshes = [go.Object(i).Brep() for i in range(go.ObjectCount) if go.Object(i).Brep()]
-        return selected_meshes
+        selected_breps = []
+        for i in range(go.ObjectCount):
+            rhino_obj = go.Object(i).Object()  # Get the RhinoObject
+
+            if hide:
+                Rhino.RhinoDoc.ActiveDoc.Objects.Hide(rhino_obj.Id, True)
+                
+            if rhino_obj:
+                if rhino_obj.Geometry and isinstance(rhino_obj.Geometry, Rhino.Geometry.Brep):
+                    selected_breps.append(rhino_obj.Geometry)
+                elif rhino_obj.Geometry:
+                    selected_breps.append(rhino_obj.Geometry.ToBrep())
+
+        Rhino.RhinoDoc.ActiveDoc.Views.Redraw()  # Refresh view after hiding objects
+        return selected_breps
     return []
 
+def handle_solid_input(option_name: str, hide: bool = True) -> Tuple[list[Rhino.Geometry.Brep], list[Rhino.Geometry.Mesh]]:
 
-def handle_solid_input(option_name: str) -> Tuple[list[Rhino.Geometry.Brep], list[Rhino.Geometry.Mesh]]:
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
     go.GeometryFilter = Rhino.DocObjects.ObjectType.Brep | Rhino.DocObjects.ObjectType.Mesh  # Filter to Breps and Meshes
@@ -131,10 +155,26 @@ def handle_solid_input(option_name: str) -> Tuple[list[Rhino.Geometry.Brep], lis
     res = go.GetMultiple(1, 0)
 
     if go.CommandResult() == Rhino.Commands.Result.Success:
-        selected_breps = [go.Object(i).Brep() for i in range(go.ObjectCount) if go.Object(i).Brep()]
-        selected_meshes = [go.Object(i).Mesh() for i in range(go.ObjectCount) if go.Object(i).Mesh()]
-        return selected_breps + selected_meshes
-    return []
+        selected_breps = []
+        selected_meshes = []
+        for i in range(go.ObjectCount):
+            rhino_obj = go.Object(i).Object()  # Get the RhinoObject
+
+            if hide:
+                Rhino.RhinoDoc.ActiveDoc.Objects.Hide(rhino_obj.Id, True)
+
+            if rhino_obj:
+                if rhino_obj.Geometry and isinstance(rhino_obj.Geometry, Rhino.Geometry.Brep):
+                    selected_breps.append(rhino_obj.Geometry)
+                elif rhino_obj.Geometry and isinstance(rhino_obj.Geometry, Rhino.Geometry.Mesh):
+                    selected_meshes.append(rhino_obj.Geometry)
+                elif rhino_obj.Geometry:           
+                    selected_breps.append(rhino_obj.Geometry.ToBrep())
+
+        Rhino.RhinoDoc.ActiveDoc.Views.Redraw()  # Refresh view after hiding objects
+        return selected_breps, selected_meshes
+
+    return [], []
 
 
 # Main method that processes input types based on the input dictionary
@@ -145,9 +185,11 @@ def generalized_input_method(
         Tuple[
             Union[float, int, list[float], list[int], list[Rhino.Geometry.Line], list[Rhino.Geometry.Polyline], list[Rhino.Geometry.Mesh], list[Rhino.Geometry.Brep]], type
         ],
+    
     ],
     callback=None,
     run_when_input_changed=True,
+    hide_input = False
 ) -> None:
     get_options = Rhino.Input.Custom.GetOption()
 
