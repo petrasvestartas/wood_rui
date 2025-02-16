@@ -1,6 +1,64 @@
 import Rhino
 import rhinoscriptsyntax as rs
 import itertools
+import System
+
+class Group():
+    def __init__(self, geometry_plane):
+
+        self.geometry_plane = geometry_plane
+        self.geometry = geometry_plane[0].Geometry
+        self.plane = self._polyline_obj_to_plane(geometry_plane[1])
+        self.features = []
+        self.axis = Rhino.Geometry.Polyline()
+        self.thickness = []
+        self.volumes = []
+        self.joints = []
+        self._user_strings_to_geometry()
+
+    def _string_to_xyz(self, s):
+        nums = list(map(float, s.split(',')))
+        points = [Rhino.Geometry.Point3d(nums[i], nums[i+1], nums[i+2]) for i in range(0, len(nums), 3)]
+        return points
+
+
+    def _user_strings_to_geometry(self, geometry_obj):
+
+        # Collect information from user strings
+        string_dictionary = geometry_obj.Attributes.GetUserStrings()
+        T = Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, polyline_obj_to_plane(geometry_obj))
+
+        for key in string_dictionary:
+            if "feature" in key:
+                value = string_dictionary[key]  # GetValues returns a list of values for the key
+                geometry = Rhino.Geometry.GeometryBase.FromJSON(value)
+                geometry.Transform(T)
+                self.features.append(geometry)
+            elif "axis" in key:
+                value = string_dictionary[key]  # GetValues returns a list of values for the key
+                points = self._string_to_xyz(value)
+                self.axis = Rhino.Geometry.Polyline(points)
+                self.axis.Transform(T)
+            elif "thickness" in key:
+                value = string_dictionary[key]  # GetValues returns a list of values for the key
+                
+
+                self.axis = Rhino.Geometry.Polyline(points)
+                self.axis.Transform(T)
+
+            
+
+    def _polyline_obj_to_plane(self, polyline_obj):
+        polyline_curve = polyline_obj.Geometry
+        if polyline_curve.PointCount == 3:  # Ensure it has exactly 3 points
+            polyline = polyline_curve.ToPolyline()
+            origin = polyline[1]
+            x_axis = polyline[0] - polyline[1]
+            y_axis = polyline[2] - polyline[1]  # Corrected y-axis calculation
+            return Rhino.Geometry.Plane(origin, x_axis, y_axis)
+        return Rhino.Geometry.Plane.Unset
+
+
 
 def polyline_obj_to_plane(polyline_obj):
     polyline_curve = polyline_obj.Geometry

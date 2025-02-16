@@ -37,7 +37,8 @@ from .command import (
 from .groups import (
     select_and_find_valid_groups,
     polyline_obj_to_plane,
-    polyline_to_plane
+    polyline_to_plane,
+    Group
 )
 
 __all__ = [
@@ -64,7 +65,6 @@ __all__ = [
     "add_axes",
     "add_skeleton",
     "add_element",
-    "select_and_find_valid_groups",
     "handle_string_input",
     "handle_numbers_input",
     "handle_integers_input",
@@ -73,6 +73,8 @@ __all__ = [
     "handle_mesh_input",
     "handle_brep_input",
     "handle_solid_input",
+    "select_and_find_valid_groups",
     "polyline_obj_to_plane",
-    "polyline_to_plane"
+    "polyline_to_plane",
+    "Group"
 ]

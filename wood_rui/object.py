@@ -174,8 +174,10 @@ def add_element(
         joints_types: list[(str,Rhino.Geometry.Point3d)],
         insertion_vectors: list[Rhino.Geometry.Vector3d],
         # simplified geometry
+        axis: list[Rhino.Geometry.Polyline],
+        radii: list[float], 
+        top_and_bottom_polylines: list[Rhino.Geometry.Polyline],
         thickness: list[float], 
-        simplified_shape: list[Rhino.Geometry.Polyline],
         # graph
         index: int = -1, 
         neighbours: list[int] = [], 
@@ -197,10 +199,14 @@ def add_element(
         The joints types to add to the Rhino document.
     insertion_vectors : list[Rhino.Geometry.Vector3d]
         The insertion vectors to add to the Rhino document.
+    axis : list[Rhino.Geometry.Polyline]
+        The axis of an element.
+    radii : list[float]
+        The radius of the axis individual points.
+    top_and_bottom_polylines : list[Rhino.Geometry.Polyline]
+        The polylines representing the element    
     thickness : list[float]
         The thickness to add to the Rhino document.
-    simplified_shape : list[Rhino.Geometry.Polyline]
-        The simplified shape to add to the Rhino document.
     """
 
     # Create layer or find the existing one.
@@ -258,7 +264,6 @@ def add_element(
 
     # Features
     for idx, feature in enumerate(features):
-        print("____________", feature)
         if isinstance(feature, Rhino.Geometry.Mesh):
             opts = Rhino.FileIO.SerializationOptions()
             opts.WriteUserData = True
@@ -272,17 +277,56 @@ def add_element(
             json = feature.ToJSON(opts)
             obj.Attributes.SetUserString(f"feature_{idx}", json)
 
-    # Simplified shape
-    if not simplified_shape:
-        obj.Attributes.SetUserString("axis", "0,0,0,0,0,"+ str(geometry.GetBoundingBox(True).Max.Z))
-        obj.Attributes.SetUserString("thickness", "10")
+    # SAxis
+    bbox = geometry.GetBoundingBox(True)
+    text_points = ""
+    if not axis:
+        text_points = "0,0,0,0,0,"+ str(bbox.Max.Z-bbox.Min.Z)
+        axis = [Rhino.Geometry.Polyline([Rhino.Geometry.Point3d(0, 0, 0), Rhino.Geometry.Point3d(0, 0, bbox.Max.Z-bbox.Min.Z)])]
+    else:
+        numbers = []
+        for p in axis:
+            numbers.append(p.X)
+            numbers.append(p.Y)
+            numbers.append(p.Z)
+        text_points : str = ','.join(str(n) for n in numbers)
 
- 
+    obj.Attributes.SetUserString("axis", text_points)
+
+    # Radius for beams
+    text_radii = ""
+    if len(radii) == 0:
+        p0 = Rhino.Geometry.Point3d(bbox.Min.X, bbox.Min.Y, bbox.Min.Z)
+        p1 = Rhino.Geometry.Point3d(bbox.Max.X, bbox.Min.Y, bbox.Min.Z)
+        diagonal_distance = p0.DistanceTo(p1)
+        text_radii = str(diagonal_distance) + "," + str(diagonal_distance)
+    else:
+        radii_checked = []
+        count = 0
+        for a in axis:
+            for p in a:
+                radii_checked.append(radii[count%len(radii)])
+                count = count + 1
+        text_radii: str = ','.join(str(r) for r in radii_checked)
+    obj.Attributes.SetUserString("radii", text_radii)
+
+    # Thickness for plates
+    text_thickness = "-"
+    if not thickness:
+        pass
+    obj.Attributes.SetUserString("thickness", text_thickness)
+
+    # Polylines for plates
+    text_top_and_bottom_polylines = "-"
+    if not top_and_bottom_polylines:
+        pass
+    obj.Attributes.SetUserString("top_and_bottom_polylines", text_top_and_bottom_polylines)
+
+    # Thickness for volumes
+    text_joints= "-"
+    obj.Attributes.SetUserString("joints", text_joints)
+        
     obj.CommitChanges()
-
-
-    
-
 
     # Redraw view
     Rhino.RhinoDoc.ActiveDoc.Views.Redraw()

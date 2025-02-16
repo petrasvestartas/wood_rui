@@ -1,6 +1,7 @@
 import Rhino
 import typing
 from typing import *
+import wood_rui
 
 
 def handle_string_input(option_name: str) -> str:
@@ -231,6 +232,9 @@ def generalized_input_method(
         elif value_type is typing.List[Rhino.Geometry.Brep]:  # List of polylines
             print(option_name, "list brep")
             get_options.AddOption(option_name)
+        elif value_type is typing.List[wood_rui.Group]:  # List of polylines
+            print(option_name, "list group")
+            get_options.AddOption(option_name)
         elif value_type is Callable:
             print(option_name, "Callable")
             get_options.AddOption(option_name)
@@ -284,6 +288,11 @@ def generalized_input_method(
                 if result:
                     input_dict[option_name] = (result, input_type)
                     Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} breps selected.")
+            elif input_type is typing.List[wood_rui.Group]:  # List of Group
+                result = wood_rui.select_and_find_valid_groups("Groups")  # geometry_planes
+                if result:
+                    input_dict[option_name] = (result, input_type)
+                    Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} groups selected.")
             elif input_type is typing.Callable:  # External Function
                 print(input_dict[option_name])
                 input_dict[option_name][0]()
