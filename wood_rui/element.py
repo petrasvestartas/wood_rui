@@ -30,7 +30,7 @@ class Element():
         self.axes : list[Rhino.Geometry.Polyline] = []
         self.radii : list[list[float]] = []
         self.thickness : float = 0.0
-        self.volumes : list[Rhino.Geometry.Polyline] = []
+        self._volumes : list[Rhino.Geometry.Polyline] = []
         self.joints : list[Rhino.Geometry.Polyline] = []  # no need to be implemented, has to be set
         self._user_strings_to_geometry(geometry_plane)
 
@@ -121,6 +121,35 @@ class Element():
             y_axis = polyline[2] - polyline[1]  # Corrected y-axis calculation
             return Rhino.Geometry.Plane(origin, x_axis, y_axis)
         return Rhino.Geometry.Plane.Unset
+
+    @property
+    def volumes(self):
+        return self._volumes
+    
+    @volumes.setter
+    def volumes(self, value):
+        self._volumes = value
+
+        # Write polylines to user strings
+        polylines_coordinates = []
+        for i in range(0, len(value), 2):
+
+            polyline_coordinates0 = []
+            for j in range(value[i].Count):
+                polyline_coordinates0.append([value[i][j].X, value[i][j].Y, value[i][j].Z])
+            
+            polyline_coordinates1 = []
+            for j in range(value[i+1].Count):
+                polyline_coordinates1.append([value[i+1][j].X, value[i+1][j].Y, value[i+1][j].Z])
+
+            polylines_coordinates.append([polyline_coordinates0, polyline_coordinates1])
+
+        str_volumes = str(polylines_coordinates)
+
+        obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
+        obj.Attributes.SetUserString("volumes", str_volumes)
+        obj.CommitChanges()
+
 
     @staticmethod
     def get_first_axes(elements):

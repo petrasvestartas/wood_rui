@@ -272,8 +272,9 @@ def generalized_input_method(
     for key, value in input_dict.items():
         if isinstance(value[0], list):
             if len(value[0]) > 0:
-                dict_values[key] = value[0][0]
-                continue
+                if isinstance(value[0][0], str):
+                    dict_values[key] = value[0]
+                    continue
         dict_values[key] = value[0]
 
     # Command prompt
