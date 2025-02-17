@@ -18,7 +18,6 @@ from .object import (
     add_three_valence,
     add_axes,
     add_skeleton,
-    add_element,
 )
 from .globals import wood_rui_globals
 from .forms import NamedValuesForm, BooleanForm
@@ -27,6 +26,7 @@ from .command import (
     handle_string_input,
     handle_numbers_input,
     handle_integers_input,
+    handle_textdots_input,
     handle_polylines_input,
     handle_lines_input,
     handle_mesh_input,
@@ -38,7 +38,11 @@ from .groups import (
     select_and_find_valid_groups,
     polyline_obj_to_plane,
     polyline_to_plane,
-    Group
+)
+
+from .element import (
+    Element,
+    ElementyType
 )
 
 __all__ = [
@@ -64,10 +68,10 @@ __all__ = [
     "generalized_input_method",
     "add_axes",
     "add_skeleton",
-    "add_element",
     "handle_string_input",
     "handle_numbers_input",
     "handle_integers_input",
+    "handle_textdots_input",
     "handle_polylines_input",
     "handle_lines_input",
     "handle_mesh_input",
@@ -76,5 +80,6 @@ __all__ = [
     "select_and_find_valid_groups",
     "polyline_obj_to_plane",
     "polyline_to_plane",
-    "Group"
+    "Element",
+    "ElementyType"
 ]

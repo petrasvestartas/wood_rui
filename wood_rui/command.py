@@ -49,6 +49,23 @@ def handle_integers_input(option_name: str) -> list[int]:
         Rhino.RhinoApp.WriteLine("Invalid input. Please enter valid integers separated by commas.")
         return []
 
+def handle_textdots_input(option_name: str, hide : bool = True) -> list[Rhino.Geometry.TextDot]:
+    """Select textdots from Rhino document."""
+    go = Rhino.Input.Custom.GetObject()
+    go.SetCommandPrompt(f"Select {option_name}")
+    go.GeometryFilter = Rhino.DocObjects.ObjectType.TextDot  # Filter to curves
+    go.EnablePreSelect(True, True)
+    go.SubObjectSelect = False
+    go.DeselectAllBeforePostSelect = False
+    res = go.GetMultiple(1, 0)
+
+
+    textdots = []  
+    if go.CommandResult() == Rhino.Commands.Result.Success:
+        textdots = [go.Object(i).TextDot() for i in range(go.ObjectCount) if go.Object(i).TextDot()]
+
+    return textdots
+
 
 def handle_polylines_input(option_name: str, hide : bool = True) -> list[Rhino.Geometry.Polyline]:
     """Select polylines from Rhino document."""
@@ -204,6 +221,11 @@ def generalized_input_method(
             dict_options[option_name] = Rhino.Input.Custom.OptionDouble(default_value)  # float
             dict_values[option_name] = dict_options[option_name].CurrentValue
             get_options.AddOptionDouble(option_name, dict_options[option_name])
+        elif value_type is typing.List[str]:
+            print(option_name, "list str")
+            dict_options[option_name] = default_value[0]
+            dict_values[option_name] = default_value[0]
+            opList = get_options.AddOptionList(option_name, default_value, 0)
         elif value_type is int:
             print(option_name, "int")
             dict_options[option_name] = Rhino.Input.Custom.OptionInteger(default_value)  # int
@@ -220,6 +242,9 @@ def generalized_input_method(
         elif value_type is typing.List[int]:  # List of ints
             print(option_name, "list int")
             get_options.AddOption(option_name)
+        elif value_type is typing.List[Rhino.Geometry.TextDot]:  # List of textdots
+            print(option_name, "list textdot")
+            get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.Line]:  # List of lines
             print(option_name, "list line")
             get_options.AddOption(option_name)
@@ -232,7 +257,7 @@ def generalized_input_method(
         elif value_type is typing.List[Rhino.Geometry.Brep]:  # List of polylines
             print(option_name, "list brep")
             get_options.AddOption(option_name)
-        elif value_type is typing.List[wood_rui.Group]:  # List of polylines
+        elif value_type is typing.List[wood_rui.Element]:  # List of polylines
             print(option_name, "list group")
             get_options.AddOption(option_name)
         elif value_type is Callable:
@@ -240,7 +265,16 @@ def generalized_input_method(
             get_options.AddOption(option_name)
 
     # Run external method to update geometry each time the input is changed.
-    callback(input_dict, dataset_name)
+    if not dict_values:
+        callback(dict_values, dataset_name)
+
+    # Set default values
+    for key, value in input_dict.items():
+        if isinstance(value[0], list):
+            if len(value[0]) > 0:
+                dict_values[key] = value[0][0]
+                continue
+        dict_values[key] = value[0]
 
     # Command prompt
     get_options.SetCommandPrompt("Select input method and options.")
@@ -253,61 +287,74 @@ def generalized_input_method(
         # If an option is selected
         if res == Rhino.Input.GetResult.Option:
             option_name = get_options.Option().EnglishName
+            print(input_dict)
             input_type = input_dict[option_name][1]
 
             if input_type is float or input_type is int or input_type is bool:
-                input_dict[option_name] = (dict_options[option_name].CurrentValue, input_type)
-                print("input_dict[option_name]", dict_options[option_name].CurrentValue)
+                dict_values[option_name] = dict_options[option_name].CurrentValue
+                print("dict_values[option_name]", dict_options[option_name].CurrentValue)
+            elif input_type is typing.List[str]:
+                dict_values[option_name] = input_dict[option_name][0][get_options.Option().CurrentListOptionIndex]
+                print("dict_values[option_name]", dict_values[option_name])
             elif input_type is typing.List[float]:
                 result = handle_numbers_input(option_name, hide_input)
                 if result:
-                    input_dict[option_name] = (result, input_type)
+                    dict_values[option_name] = result
                     Rhino.RhinoApp.WriteLine(f"Selected numbers for {option_name}: {result}")
             elif input_type is typing.List[int]:
                 result = handle_numbers_input(option_name, hide_input)
                 if result:
-                    input_dict[option_name] = (result, input_type)
+                    dict_values[option_name] = result
                     Rhino.RhinoApp.WriteLine(f"Selected integers for {option_name}: {result}")
+            elif input_type is typing.List[Rhino.Geometry.TextDot]:  # List of TextDot
+                result = handle_textdots_input(option_name, hide_input)
+                if result:
+                    dict_values[option_name] = result
+                    Rhino.RhinoApp.WriteLine(f"Selected textdots for {option_name}: {len(result)} textdots selected.")
             elif input_type is typing.List[Rhino.Geometry.Line]:  # List of Line
                 result = handle_lines_input(option_name, hide_input)
                 if result:
-                    input_dict[option_name] = (result, input_type)
+                    dict_values[option_name] = result
                     Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} lines selected.")
             elif input_type is typing.List[Rhino.Geometry.Polyline]:  # List of Polyline
                 result = handle_polylines_input(option_name, hide_input)
                 if result:
-                    input_dict[option_name] = (result, input_type)
+                    dict_values[option_name] = result
                     Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} polylines selected.")
             elif input_type is typing.List[Rhino.Geometry.Mesh]:  # List of Mesh
                 result = handle_mesh_input(option_name, hide_input)
                 if result:
-                    input_dict[option_name] = (result, input_type)
+                    dict_values[option_name] = result
                     Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} meshes selected.")
             elif input_type is typing.List[Rhino.Geometry.Brep]:  # List of Mesh
                 result = handle_brep_input(option_name, hide_input)
                 if result:
-                    input_dict[option_name] = (result, input_type)
+                    dict_values[option_name] = result
                     Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} breps selected.")
-            elif input_type is typing.List[wood_rui.Group]:  # List of Group
-                result = wood_rui.select_and_find_valid_groups("Groups")  # geometry_planes
+            elif input_type is typing.List[wood_rui.Element]:  # List of Element
+                result = wood_rui.select_and_find_valid_groups("Elements")  # geometry_planes
                 if result:
-                    input_dict[option_name] = (result, input_type)
-                    Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} groups selected.")
+                    elements = []
+                    for r in result:
+                        element = wood_rui.Element(r)
+                        elements.append(element)
+                    dict_values[option_name] = elements
+
             elif input_type is typing.Callable:  # External Function
-                print(input_dict[option_name])
-                input_dict[option_name][0]()
+                dict_values[option_name]()
                 Rhino.RhinoApp.WriteLine(f"External function is called {option_name}.")
 
             # Run external method to update geometry each time the input is changed.
             if run_when_input_changed:
-                callback(input_dict, dataset_name)
+                callback(dict_values, dataset_name)
 
         elif res == Rhino.Input.GetResult.Nothing or res == Rhino.Input.GetResult.Cancel:
             Rhino.RhinoApp.WriteLine("No option selected or operation canceled. Exiting...")
             done = True  # Exit the loop by setting done to True
         
     if not run_when_input_changed:
-        callback(input_dict, dataset_name)
+        if dict_values:
+            callback(dict_values, dataset_name)
 
     # Final output and return success
     return Rhino.Commands.Result.Success
