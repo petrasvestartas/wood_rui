@@ -49,6 +49,7 @@ def handle_integers_input(option_name: str) -> list[int]:
         Rhino.RhinoApp.WriteLine("Invalid input. Please enter valid integers separated by commas.")
         return []
 
+
 def handle_textdots_input(option_name: str, hide : bool = True) -> list[Rhino.Geometry.TextDot]:
     """Select textdots from Rhino document."""
     go = Rhino.Input.Custom.GetObject()
@@ -217,51 +218,51 @@ def generalized_input_method(
 
         # print(option_name, value_type)
         if value_type is float:
-            print(option_name, "float")
+            # print(option_name, "float")
             dict_options[option_name] = Rhino.Input.Custom.OptionDouble(default_value)  # float
             dict_values[option_name] = dict_options[option_name].CurrentValue
             get_options.AddOptionDouble(option_name, dict_options[option_name])
         elif value_type is typing.List[str]:
-            print(option_name, "list str")
+            # print(option_name, "list str")
             dict_options[option_name] = default_value[0]
             dict_values[option_name] = default_value[0]
             opList = get_options.AddOptionList(option_name, default_value, 0)
         elif value_type is int:
-            print(option_name, "int")
+            # print(option_name, "int")
             dict_options[option_name] = Rhino.Input.Custom.OptionInteger(default_value)  # int
             dict_values[option_name] = dict_options[option_name].CurrentValue
             get_options.AddOptionInteger(option_name, dict_options[option_name])
         elif value_type is bool:
-            print(option_name, "bool")
+            # print(option_name, "bool")
             dict_options[option_name] = Rhino.Input.Custom.OptionToggle(default_value, "Yes", "No")
             dict_values[option_name] = dict_options[option_name].CurrentValue
             get_options.AddOptionToggle(option_name, dict_options[option_name])
         elif value_type is typing.List[float]:  # List of floats
-            print(option_name, "list float")
+            # print(option_name, "list float")
             get_options.AddOption(option_name)
         elif value_type is typing.List[int]:  # List of ints
-            print(option_name, "list int")
+            # print(option_name, "list int")
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.TextDot]:  # List of textdots
-            print(option_name, "list textdot")
+            # print(option_name, "list textdot")
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.Line]:  # List of lines
-            print(option_name, "list line")
+            # print(option_name, "list line")
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.Polyline]:  # List of polylines
-            print(option_name, "list polyline")
+            # print(option_name, "list polyline")
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.Mesh]:  # List of polylines
-            print(option_name, "list mesh")
+            # print(option_name, "list mesh")
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.Brep]:  # List of polylines
-            print(option_name, "list brep")
+            # print(option_name, "list brep")
             get_options.AddOption(option_name)
         elif value_type is typing.List[wood_rui.Element]:  # List of polylines
-            print(option_name, "list group")
+            # print(option_name, "list group")
             get_options.AddOption(option_name)
         elif value_type is Callable:
-            print(option_name, "Callable")
+            # print(option_name, "Callable")
             get_options.AddOption(option_name)
 
     # Run external method to update geometry each time the input is changed.
@@ -273,7 +274,7 @@ def generalized_input_method(
         if isinstance(value[0], list):
             if len(value[0]) > 0:
                 if isinstance(value[0][0], str):
-                    dict_values[key] = value[0]
+                    dict_values[key] = value[0][0]
                     continue
         dict_values[key] = value[0]
 
@@ -288,15 +289,15 @@ def generalized_input_method(
         # If an option is selected
         if res == Rhino.Input.GetResult.Option:
             option_name = get_options.Option().EnglishName
-            print(input_dict)
+            # print(input_dict)
             input_type = input_dict[option_name][1]
 
             if input_type is float or input_type is int or input_type is bool:
                 dict_values[option_name] = dict_options[option_name].CurrentValue
-                print("dict_values[option_name]", dict_options[option_name].CurrentValue)
+                # print("dict_values[option_name]", dict_options[option_name].CurrentValue)
             elif input_type is typing.List[str]:
                 dict_values[option_name] = input_dict[option_name][0][get_options.Option().CurrentListOptionIndex]
-                print("dict_values[option_name]", dict_values[option_name])
+                # print("dict_values[option_name]", dict_values[option_name])
             elif input_type is typing.List[float]:
                 result = handle_numbers_input(option_name, hide_input)
                 if result:

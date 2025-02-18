@@ -21,6 +21,8 @@ class Element():
     def __init__(self, geometry_plane):
 
         self.geometry_plane : tuple[Rhino.DocObjects.RhinoObject, Rhino.Geometry.Plane] = geometry_plane  # no need to be implemented
+        self._index : int = -1  # implemented
+        self._neighbours : list[list[int]] = []  # implemented
         self.geometry : Union[Rhino.Geometry.Brep, Rhino.Geometry.Mesh] = geometry_plane[0].Geometry  # implemented
         self.elementy_type : str = ElementyType.BEAM  # 0 - plate, 1 beam implemented
         self.index : int = -1 # implemented
@@ -123,8 +125,46 @@ class Element():
         return Rhino.Geometry.Plane.Unset
 
     @property
+    def index(self):
+        return int(self.geometry_plane[0].Attributes.GetUserString("index"))
+
+    @index.setter
+    def index(self, value):
+        self._index = value
+        obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
+        obj.Attributes.SetUserString("index", str(value))
+        obj.CommitChanges()
+
+    @property
+    def neighbours(self):
+        value = self.geometry_plane[0].Attributes.GetUserString("neighbours")
+        return ast.literal_eval(value)
+
+    @neighbours.setter
+    def neighbours(self, value):
+        self._neighbours = value
+        obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
+        obj.Attributes.SetUserString("neighbours", str(value))
+        obj.CommitChanges()
+    
+
+    @property
     def volumes(self):
-        return self._volumes
+        value = self.geometry_plane[0].Attributes.GetUserString("volumes")
+        list3 = ast.literal_eval(value)
+        
+        # convert triple nested lists to polylines
+        polylines_list = []
+        for list2 in list3:
+            polylines = []
+            for list1 in list2:
+                polyline = Rhino.Geometry.Polyline()
+                for i in range(0, len(list1), 3):
+                    polyline.Add(Rhino.Geometry.Point3d(list1[i], list1[i+1], list1[i+2]))
+                polylines.append(polyline)
+            polylines_list.append(polylines)
+        
+        return polylines_list
     
     @volumes.setter
     def volumes(self, value):
@@ -136,11 +176,11 @@ class Element():
 
             polyline_coordinates0 = []
             for j in range(value[i].Count):
-                polyline_coordinates0.append([value[i][j].X, value[i][j].Y, value[i][j].Z])
+                polyline_coordinates0.extend([value[i][j].X, value[i][j].Y, value[i][j].Z])
             
             polyline_coordinates1 = []
             for j in range(value[i+1].Count):
-                polyline_coordinates1.append([value[i+1][j].X, value[i+1][j].Y, value[i+1][j].Z])
+                polyline_coordinates1.extend([value[i+1][j].X, value[i+1][j].Y, value[i+1][j].Z])
 
             polylines_coordinates.append([polyline_coordinates0, polyline_coordinates1])
 
@@ -149,6 +189,8 @@ class Element():
         obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
         obj.Attributes.SetUserString("volumes", str_volumes)
         obj.CommitChanges()
+    
+
 
 
     @staticmethod
@@ -180,7 +222,7 @@ class Element():
             thickness: list[float], 
             # graph
             index: int = -1, 
-            neighbours: list[int] = [], 
+            neighbours: list[list[int]] = [], 
             # tree
             parent: str = "") -> None:
         """Add a mesh and associated polyline to the specified layer, apply attributes, and group them uniquely.
@@ -263,7 +305,6 @@ class Element():
         Rhino.RhinoDoc.ActiveDoc.Groups.AddToGroup(group_index, groupframe_guid)
 
         # Element Type
-        print("____________", element_type)
         obj.Attributes.SetUserString("element_type", element_type)
 
         # Index
@@ -379,6 +420,7 @@ class Element():
 
         # Thickness for volumes
         text_volumes= "-"
+    
         obj.Attributes.SetUserString("volumes", text_volumes)
 
         # Thickness for volumes

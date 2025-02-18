@@ -5,6 +5,17 @@ from System.Drawing import Color
 from typing import *
 import ast
 
+NestedList = Union[Any, List["NestedList"]]
+
+def _flatten_recursive(nested_list: NestedList) -> list[any]:
+    flattened = []
+    for item in nested_list:
+        if isinstance(item, list):  # If item is a list, recurse
+            flattened.extend(_flatten_recursive(item))
+        else:
+            flattened.append(item)  # If item is not a list, add it directly
+    return flattened
+
 
 def delete_objects(guids):
     """Delete Rhino objects by their GUIDs, handling individual items, lists, and nested lists."""
@@ -47,22 +58,28 @@ def add_mesh(mesh, data_name):
         return None
 
 
-def add_polylines(polylines: list[Rhino.Geometry.Polyline], data_name: str, group_indices: list[int] = None) -> None:
+def add_polylines(polylines: NestedList, sublayer_name: str, subsublayer_name : str = "polylines", delete_existing = True) -> None:
     """Add a list of polylines to the specified layer and return their GUIDs.
 
     Parameters
     ----------
-    foldername : list[Rhino.Geometry.Polyline]
-        List of polylines.
-    filename_of_dataset : str
-        Name of dataset.
+    polylines : NestedList
+        List of polylines of type Rhino.Geometry.Polyline that can be nested in any list order.
+    sublayer_name : str
+        Name of the sublayer to add the polylines to.
+    subsublayer_name : str
+        Name of the subsublayer to add the polylines to.
+    delete_existing : bool
+        If True, delete all existing objects in the specified layer.
 
     """
 
-    layer_index = ensure_layer_exists("compas_wood", data_name, "polylines", Color.DodgerBlue)
+    polylines_flattenend = _flatten_recursive(polylines)
 
-    polyline_guids = []
-    for idx, polyline in enumerate(polylines):
+    layer_index = ensure_layer_exists("compas_wood", sublayer_name, subsublayer_name, Color.DodgerBlue, delete_existing=delete_existing)
+
+    # polyline_guids = []
+    for idx, polyline in enumerate(polylines_flattenend):
         if polyline:
             obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddCurve(polyline.ToNurbsCurve())
             if obj_guid:
@@ -70,25 +87,24 @@ def add_polylines(polylines: list[Rhino.Geometry.Polyline], data_name: str, grou
                 if obj:
                     obj.Attributes.LayerIndex = layer_index
 
-                    polyline_guids.append(obj_guid)
-                    obj.Attributes.SetUserString("element_id", str(int(idx * 0.5)))
-                    obj.Attributes.SetUserString("dataset", data_name)
-                    obj.Attributes.SetUserString("type", "polylines")
+                    # polyline_guids.append(obj_guid)
+                    # obj.Attributes.SetUserString("element_id", str(int(idx * 0.5)))
+                    # obj.Attributes.SetUserString("dataset", data_name)
+                    # obj.Attributes.SetUserString("type", "polylines")
 
-                    if group_indices and len(group_indices) > idx:
-                        obj.Attributes.SetUserString("group_index", str(group_indices[idx]))
+                    # if group_indices and len(group_indices) > idx:
+                    #     obj.Attributes.SetUserString("group_index", str(group_indices[idx]))
                     obj.CommitChanges()
                 else:
                     pass
             else:
                 pass
 
-    if "polylines_guid" in wood_rui_globals[data_name]:
-        delete_objects(wood_rui_globals[data_name]["polylines_guid"])
-    wood_rui_globals[data_name]["polylines_guid"] = polyline_guids
-    wood_rui_globals[data_name]["polylines"] = polylines
+    # if "polylines_guid" in wood_rui_globals[data_name]:
+        # wood_rui_globals[data_name]["polylines_guid"] = polyline_guids
+        # wood_rui_globals[data_name]["polylines"] = polylines
 
-    layer_index_dots = ensure_layer_exists("compas_wood", data_name, "joint_types", Color.MediumVioletRed)
+    # layer_index_dots = ensure_layer_exists("compas_wood", data_name, "joint_types", Color.MediumVioletRed)
     Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw()  # 0 ms
 
 
