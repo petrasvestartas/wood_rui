@@ -2,12 +2,8 @@ import Rhino
 import System
 from typing import Union
 import ast
-from enum import Enum
 import wood_rui
 
-class ElementyType(Enum):
-    BEAM = "beam"
-    PLATE = "plate"
 
 class Element():
     """
@@ -21,98 +17,8 @@ class Element():
     def __init__(self, geometry_plane):
 
         self.geometry_plane : tuple[Rhino.DocObjects.RhinoObject, Rhino.Geometry.Plane] = geometry_plane  # no need to be implemented
-        self._index : int = -1  # implemented
-        self._neighbours : list[list[int]] = []  # implemented
-        self.geometry : Union[Rhino.Geometry.Brep, Rhino.Geometry.Mesh] = geometry_plane[0].Geometry  # implemented
-        self.elementy_type : str = ElementyType.BEAM  # 0 - plate, 1 beam implemented
-        self.index : int = -1 # implemented
-        self.plane : Rhino.Geometry.Plane = self._polyline_obj_to_plane(geometry_plane[1]) # implemented
-        self.features : Union[list[Rhino.Geometry.Brep], list[Rhino.Geometry.Mesh]] = []  # implemented
-        self.insertion : list[Rhino.Geometry.Vector3d] = []  # implemented
-        self.axes : list[Rhino.Geometry.Polyline] = []
-        self.radii : list[list[float]] = []
-        self.thickness : float = 0.0
-        self._volumes : list[Rhino.Geometry.Polyline] = []
-        self.joints : list[Rhino.Geometry.Polyline] = []  # no need to be implemented, has to be set
-        self._user_strings_to_geometry(geometry_plane)
 
-    def _user_strings_to_geometry(self, geometry_plane):
-        def process_feature(value, T):
-            if value == "-":
-                return
-            geometry = Rhino.Geometry.GeometryBase.FromJSON(value)
-            geometry.Transform(T)
-            self.features.append(geometry)
-        
-        def process_insertion(value, T):
-            if value == "-":
-                return
-            list_of_lists = ast.literal_eval(value)
-            for l in list_of_lists:
-                my_list = [float(i) for i in l]
-                p0 = Rhino.Geometry.Point3d.Origin
-                p1 = Rhino.Geometry.Point3d(my_list[0], my_list[1], my_list[2])
-                line = Rhino.Geometry.Line(p0, p1)
-                line.Transform(T)
-                self.insertion.append(line.Direction)
 
-        def process_axes(value, T):
-            if value == "-":
-                return
-            list_of_lists = ast.literal_eval(value)
-
-            for l in list_of_lists:
-                my_list = [float(i) for i in l]
-                
-                polyline = Rhino.Geometry.Polyline()
-                for i in range(0, len(my_list), 3):
-                    polyline.Add(Rhino.Geometry.Point3d(my_list[i], my_list[i+1], my_list[i+2]))
-                polyline.Transform(T)
-                self.axes.append(polyline)
-
-        def process_radii(value, T):
-            if value == "-":
-                return
-            list_of_lists = ast.literal_eval(value)
-            for l in list_of_lists:
-                my_list = [float(i) for i in l]
-                self.radii.append(my_list)
-
-        def process_volumes(value, T):
-            if value == "-":
-                return
-            # Add your processing logic here
-
-        def process_thickness(value, T):
-            if value == "-":
-                return
-            # Add your processing logic here
-
-        def process_joints(value, T):
-            if value == "-":
-                return
-            # Add your processing logic here
-
-        # Collect information from user strings
-        name_value_collection = geometry_plane[0].Attributes.GetUserStrings()
-        string_dictionary = {key: name_value_collection[key] for key in name_value_collection.AllKeys}
-        T = Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, self._polyline_obj_to_plane(geometry_plane[1]))
-
-        # Map keys to processing functions
-        key_to_function = {
-            "feature": process_feature,
-            "insertion" : process_insertion,
-            "axes": process_axes,
-            "radii": process_radii,
-            "volumes": process_volumes,
-            "thickness": process_thickness,
-            "joints": process_joints,
-        }
-
-        for key, value in string_dictionary.items():
-            for k, func in key_to_function.items():
-                if k in key:
-                    func(value, T)
 
     def _polyline_obj_to_plane(self, polyline_obj):
         polyline_curve = polyline_obj.Geometry
@@ -123,6 +29,87 @@ class Element():
             y_axis = polyline[2] - polyline[1]  # Corrected y-axis calculation
             return Rhino.Geometry.Plane(origin, x_axis, y_axis)
         return Rhino.Geometry.Plane.Unset
+
+    @property
+    def plane(self):
+
+        polyline_curve = self.geometry_plane[1].Geometry
+        if polyline_curve.PointCount == 3:  # Ensure it has exactly 3 points
+            polyline = polyline_curve.ToPolyline()
+            origin = polyline[1]
+            x_axis = polyline[0] - polyline[1]
+            y_axis = polyline[2] - polyline[1]  # Corrected y-axis calculation
+            return Rhino.Geometry.Plane(origin, x_axis, y_axis)
+        return Rhino.Geometry.Plane.Unset
+    
+    def plane_axes(self, scale=1):
+        plane = self.plane
+        line0 = Rhino.Geometry.Line(p0, p0 + plane.XAxis * scale)
+        line1 = Rhino.Geometry.Line(p0, p0 + plane.YAxis * scale)
+        line2 = Rhino.Geometry.Line(p0, p0 + plane.ZAxis * scale)
+        return [line0, line1, line2]
+    
+    @property
+    def transformation(self):
+        return Rhino.Geometry.Transform.PlaneToPlane(self.plane, Rhino.Geometry.Plane.WorldXY)
+    
+    @property
+    def transformation_inverse(self):
+        return Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, self.plane)
+    
+    @property
+    def geometry(self):
+        return self.geometry_plane[0].Geometry
+
+    @property
+    def features_count(self):
+        count = 0
+        string_dictionary = self.geometry_plane[0].Attributes.GetUserStrings()
+        for key in string_dictionary:
+            if "feature" in key:
+                count += 1
+        return count
+
+    @property
+    def features(self):
+    
+        geometries = []
+        string_dictionary = self.geometry_plane[0].Attributes.GetUserStrings()
+        for key in string_dictionary:
+            if "feature" in key:
+                value = string_dictionary[key]  # GetValues returns a list of values for the key
+                geometry = Rhino.Geometry.GeometryBase.FromJSON(value)
+                geometry.Transform(self.transformation)
+                geometries.append(geometry)
+        return geometries
+    
+    @features.setter
+    def features(self, value):
+        feature_count = self.features_count
+        self._features = value
+        for idx, geometry in enumerate(value):
+            opts = Rhino.FileIO.SerializationOptions()
+            opts.WriteUserData = True
+            json = geometry.ToJSON(opts)
+            obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
+            obj.Attributes.SetUserString(f"feature_{feature_count+idx}", json)
+            obj.CommitChanges()
+
+    def clear_features(self):
+        for key in self.geometry_plane[0].Attributes.GetUserStrings():
+            if "feature" in key:
+                self.geometry_plane[0].Attributes.DeleteUserString(key)
+
+    @property
+    def element_type(self):
+        return self.geometry_plane[0].Attributes.GetUserString("element_type")
+    
+    @element_type.setter
+    def element_type(self, value):
+        self._element_type = value
+        obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
+        obj.Attributes.SetUserString("element_type", value)
+        obj.CommitChanges()
 
     @property
     def index(self):
@@ -146,8 +133,63 @@ class Element():
         obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
         obj.Attributes.SetUserString("neighbours", str(value))
         obj.CommitChanges()
-    
 
+    @property
+    def axes(self):
+        value = self.geometry_plane[0].Attributes.GetUserString("axes")
+        list = ast.literal_eval(value)
+        polylines = []
+        for l in list:
+            polyline = Rhino.Geometry.Polyline()
+            for i in range(0, len(l), 3):
+                polyline.Add(Rhino.Geometry.Point3d(l[i], l[i+1], l[i+2]))
+            polyline.transform(self.transformation)
+            polylines.append(polyline)
+        return polylines
+
+    @axes.setter
+    def axes(self, value):
+        self._axes = value
+        polylines_coordinates = []
+        for polyline in value:
+            polyline_transformed = polyline.Duplicate()
+            polyline_transformed.transform(self.transformation_inverse)
+            coordinates = []
+            for i in range(polyline_transformed.Count):
+                coordinates.extend([polyline_transformed[i].X, polyline_transformed[i].Y, polyline_transformed[i].Z])
+            polylines_coordinates.append(coordinates)
+
+        str_axes = str(polylines_coordinates)
+
+        obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
+        obj.Attributes.SetUserString("axes", str_axes)
+        obj.CommitChanges()
+    
+    @property
+    def radii(self):
+        value = self.geometry_plane[0].Attributes.GetUserString("radii")
+        list = ast.literal_eval(value)
+        return list
+    
+    @radii.setter
+    def radii(self, value):
+        self._radii = value
+        obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
+        obj.Attributes.SetUserString("radii", str(value))
+        obj.CommitChanges()
+
+    @property
+    def thickness(self):
+        value = self.geometry_plane[0].Attributes.GetUserString("thickness")
+        return float(value)
+    
+    @thickness.setter
+    def thickness(self, value):
+        self._thickness = value
+        obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
+        obj.Attributes.SetUserString("thickness", str(value))
+        obj.CommitChanges()
+    
     @property
     def volumes(self):
         value = self.geometry_plane[0].Attributes.GetUserString("volumes")
@@ -161,6 +203,7 @@ class Element():
                 polyline = Rhino.Geometry.Polyline()
                 for i in range(0, len(list1), 3):
                     polyline.Add(Rhino.Geometry.Point3d(list1[i], list1[i+1], list1[i+2]))
+                polyline.transform(self.transformation)
                 polylines.append(polyline)
             polylines_list.append(polylines)
         
@@ -174,13 +217,19 @@ class Element():
         polylines_coordinates = []
         for i in range(0, len(value), 2):
 
+            polyline0 = Rhino.Geometry.Polyline(value[i])
+            polyline0.transform(self.transformation_inverse)
+
+            polyline1 = Rhino.Geometry.Polyline(value[i+1])
+            polyline1.transform(self.transformation_inverse)
+
             polyline_coordinates0 = []
-            for j in range(value[i].Count):
-                polyline_coordinates0.extend([value[i][j].X, value[i][j].Y, value[i][j].Z])
+            for j in range(polyline0.Count):
+                polyline_coordinates0.extend([polyline0[j].X, polyline0[j].Y, polyline0[j].Z])
             
             polyline_coordinates1 = []
-            for j in range(value[i+1].Count):
-                polyline_coordinates1.extend([value[i+1][j].X, value[i+1][j].Y, value[i+1][j].Z])
+            for j in range(polyline1.Count):
+                polyline_coordinates1.extend([polyline1[j].X, polyline1[j].Y, polyline1[j].Z])
 
             polylines_coordinates.append([polyline_coordinates0, polyline_coordinates1])
 
@@ -190,8 +239,54 @@ class Element():
         obj.Attributes.SetUserString("volumes", str_volumes)
         obj.CommitChanges()
     
+    @property
+    def insertion(self):
+        value = self.geometry_plane[0].Attributes.GetUserString("insertion")
+
+        if value == "-" or value is None:
+            return [[] for _ in range(len(self.volumes))]
+
+        list_values = ast.literal_eval(value)
+        lists_vectors = []
+        for l in list_values:
+            vectors = []
+            for i in range(0, len(l), 3):
+                vectors.append(Rhino.Geometry.Vector3d(l[i], l[i+1], l[i+2]))
+            lists_vectors.append(vectors)
+        return lists_vectors
+
+    @insertion.setter
+    def insertion(self, value):
 
 
+        list_coordinates = []
+        for list_vectors in value:
+            coordinates = []
+            for vector in list_vectors:
+                coordinates.extend([vector.X, vector.Y, vector.Z])
+            list_coordinates.append(coordinates)
+
+        obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
+        obj.Attributes.SetUserString("insertion", str(coordinates))
+        obj.CommitChanges()
+    
+    @property
+    def joint_types(self):
+        value = self.geometry_plane[0].Attributes.GetUserString("joint_types")
+
+        if value == "-" or value is None:
+            return [[] for _ in range(len(self.volumes))]
+
+        list_values = ast.literal_eval(value)
+        return list_values
+    
+    @joint_types.setter
+    def joint_types(self, value):
+        self._joint_types = value
+        obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
+        obj.Attributes.SetUserString("joint_types", str(value))
+        obj.CommitChanges()
+            
 
     @staticmethod
     def get_first_axes(elements):
@@ -201,79 +296,91 @@ class Element():
     def get_first_radii(elements):
         return [element.radii[0] for element in elements]
 
-    @staticmethod
-    def get_first_insertion(elements):
-        return [element.insertion for element in elements]
+
+
 
     @staticmethod
     def add_element(
-            # layer
-            layer_name: str,
-            # geometry, plates or beams, use solids.
-            geometry: Union[Rhino.Geometry.Brep, Rhino.Geometry.Mesh, list[Rhino.Geometry.Polyline]],
-            element_type: str,
-            # features
-            features: list[Union[Rhino.Geometry.Brep, Rhino.Geometry.Mesh]], 
-            insertion: list[Rhino.Geometry.Line],
-            joints_types: list[(str,Rhino.Geometry.Point3d)],
-            # simplified geometry
-            axes: list[list[Rhino.Geometry.Polyline]],
-            radii: list[float], 
-            thickness: list[float], 
-            # graph
-            index: int = -1, 
-            neighbours: list[list[int]] = [], 
-            # tree
-            parent: str = "") -> None:
-        """Add a mesh and associated polyline to the specified layer, apply attributes, and group them uniquely.
+            shape : Union[Rhino.Geometry.Brep, Rhino.Geometry.Mesh],
+            layer_name: str = "my_model",
+            name : str = "beam",
+            index : int = -1,
+            neighbours : list[int] = [],
+            features : list[Union[Rhino.Geometry.Brep, Rhino.Geometry.Mesh]] = [], 
+            pair_polyline : list[Rhino.Geometry.Polyline] = [],
+            pair_polyline_merged : list[Rhino.Geometry.Polyline] = [],
+            axes : list[Rhino.Geometry.Polyline] = [],
+            radii : list[list[float]] = [],
+            thickness : float = 0.0,
+            insertion : list[list[Rhino.Geometry.Line]] = [],
+            joint_types : list[Rhino.Geometry.TextDot] = []
+    ) -> None:
+        """ Add element with all its attributes for the wood joinery solver. 
 
         Parameters
         ----------
+        shape : Union[Rhino.Geometry.Brep, Rhino.Geometry.Mesh]
+            The shape of the element. Final geometry is represented by one solid object.
         layer_name : str
             The name of the layer to add the geometry to.
-        element_type : str
-            The type of the elemen: plate, beam.
-        geometry : Union[Rhino.Geometry.Brep, Rhino.Geometry.Mesh]
-            The geometry to add to the Rhino document.
+        name : str
+            The name of the element e.g. beam or plate.
+        index : int
+            The index of the element. Index is important when element are selected randomly.
+        neighbours : list[int]
+            The indices of the neighbouring elements.
         features : list[Union[Rhino.Geometry.Brep, Rhino.Geometry.Mesh]]
-            The features to add to the Rhino document.
-        insertion : list[Rhino.Geometry.Line]
-            The insertion lines to add to the Rhino document.
-        joints_types : list[(str,Rhino.Geometry.TextDot)]
-            The joints types to add to the Rhino document.
-        insertion_vectors : list[Rhino.Geometry.Vector3d]
-            The insertion vectors to add to the Rhino document.
+            The features of the element. Features are represented by multiple solid objects.
+        pair_polyline : list[Rhino.Geometry.Polyline]
+            The pair of polylines that represent the top and bottom of the element.
+        pair_polyline_merged : list[Rhino.Geometry.Polyline]
+            The pair of polylines that represent the top and bottom with joinery, specific to plates.
         axes : list[Rhino.Geometry.Polyline]
-            The axes of an element.
-        radii : list[float]
-            The radius of the axis individual points.
-        thickness : list[float]
-            The thickness to add to the Rhino document.
+            The axes of the element.
+        radii : list[list[float]]
+            The radii of the axes.
+        thickness : float
+            The thickness of the element.
+        insertion : list[Line]
+            The insertion vectors of the element.
+        joint_types : list[TextDot]
+            The joints found by searching through the text dots.
+        
         """
 
+        ######################################################################
+        # Add shape to Rhino document add assign plane on WorldXY.
+        #   Create a layer: compas_wood::layer_name::element.
+        #   Add geometry to the Rhino Canvas.
+        #   Add a polyline to the Rhino Canvas to represnt a plane.
+        ######################################################################
+
         # Create layer or find the existing one.
-        layer_index = wood_rui.ensure_layer_exists("compas_wood", "model", layer_name, System.Drawing.Color.Red)
+        layer_index = wood_rui.ensure_layer_exists("compas_wood", layer_name, name, System.Drawing.Color.Red)
         
         # Add the geometry to the Rhino document.
-        if not geometry:
-            Rhino.RhinoApp.WriteLine("No geometry to add.")
+        if not shape:
+            Rhino.RhinoApp.WriteLine("Attention: no shape to add.")
             return
         
         obj_guid = None
 
-        if isinstance(geometry, Rhino.Geometry.Mesh):
-            obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddMesh(geometry)
-        elif isinstance(geometry, Rhino.Geometry.Brep):
-            obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddBrep(geometry)
+        if isinstance(shape, Rhino.Geometry.Mesh):
+            obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddMesh(shape)
+        elif isinstance(shape, Rhino.Geometry.Brep):
+            obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddBrep(shape)
+        else:
+            Rhino.RhinoApp.WriteLine("Attention: shape is not a mesh or brep: {}".format(type(shape)))
+            return
 
         if not obj_guid:
-            Rhino.RhinoApp.WriteLine("Failed to add geometry.")
+            Rhino.RhinoApp.WriteLine("Attention: failed to add shape.")
             return
 
         obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(obj_guid)
         
         if not obj:
-            Rhino.RhinoApp.WriteLine("Failed to find geometry.")
+            Rhino.RhinoApp.WriteLine("Attention: failed to find shape.")
             return
 
         obj.Attributes.LayerIndex = layer_index
@@ -292,31 +399,46 @@ class Element():
 
         groupframe_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddPolyline(groupframe)
         if not groupframe_guid:
+            print("Attention: failed to add group frame.")
             return
         groupframe_obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(groupframe_guid)
         if not groupframe_obj:
+            print("Attention: failed to find group frame.")
             return
-        
-        # groupframe_obj.Attributes.Visible = False
-        # Rhino.RhinoDoc.ActiveDoc.Objects.ModifyAttributes(groupframe_obj, groupframe_obj.Attributes, True)
-        
+               
         group_index = Rhino.RhinoDoc.ActiveDoc.Groups.Add()
         Rhino.RhinoDoc.ActiveDoc.Groups.AddToGroup(group_index, obj_guid)
         Rhino.RhinoDoc.ActiveDoc.Groups.AddToGroup(group_index, groupframe_guid)
 
-        # Element Type
-        obj.Attributes.SetUserString("element_type", element_type)
 
-        # Index
-        obj.Attributes.SetUserString("index", str(index))
+        ######################################################################
+        # Go through individual attributes and assign the user strings.
+        #   name : str = "beam",
+        #   index : int = -1,
+        #   neighbours : list[int] = [],
+        #   features : list[Union[Rhino.Geometry.Brep, Rhino.Geometry.Mesh]] = [], 
+        #   pair_polyline : list[Rhino.Geometry.Polyline] = [],
+        #   pair_polyline_merged : list[Rhino.Geometry.Polyline] = [],
+        #   axes : list[Rhino.Geometry.Polyline] = [],
+        #   radii : list[list[float]] = [],
+        #   thickness : float = 0.0,
+        #   insertion : list[Line] = [],
+        #   joint_types : list[Rhino.Geometry.TextDot] = [],
+        #   joint_volumes : list[list[Rhino.Geometry.Polyline]] = [],
+        #   joint_lines : list[Rhino.Geometry.Polyline] = [],
+        #   joint_areas : list[Rhino.Geometry.Polyline] = [],
+        ######################################################################
 
-        # Neighbours
-        obj.Attributes.SetUserString("neighbours", str(neighbours) if len(neighbours)>0 else "-")
+        # name
+        obj.Attributes.SetUserString("name", name if name else "-")
 
-        # Parent
-        obj.Attributes.SetUserString("parent", str(parent) if parent else "-")
+        # index
+        obj.Attributes.SetUserString("index", str(index) if index else "-")
 
-        # Features
+        # neighbours
+        obj.Attributes.SetUserString("neighbours", str(neighbours) if neighbours else "-")
+
+        # features - this attribute can be missing when nothing is assigned
         for idx, feature in enumerate(features):
             if isinstance(feature, Rhino.Geometry.Mesh):
                 opts = Rhino.FileIO.SerializationOptions()
@@ -330,55 +452,29 @@ class Element():
                 opts.WriteRenderMeshes = False
                 json = feature.ToJSON(opts)
                 obj.Attributes.SetUserString(f"feature_{idx}", json)
+        
+        # pair_polyline
+        list_coordinates = []
+        for idx, polyline in enumerate(pair_polyline):
+            coordinates = []
+            for i in range(polyline.Count):
+                coordinates.extend([polyline[i].X, polyline[i].Y, polyline[i].Z])
+            list_coordinates.append(coordinates)
 
+        obj.Attributes.SetUserString("pair_polyline", str(list_coordinates) if len(list_coordinates) > 0 else "-")
 
-        # Insertion
-        str_insertion = ""
-        if len(insertion) == 0:
-            direction = Rhino.Geometry.Vector3d.XAxis
-            str_insertion = "[[" + str(direction.X) + "," + str(direction.Y) + "," + str(direction.Z) + "]]"
-        else:
-            if element_type == "plate":
-                # Plates - Not implemented, must ber per face
-                str_insertion = "-"
-            elif element_type == "beam":
-                # Beams
-                directions_matched_to_axes = []
-                count = 0
-                for axis in axes:
-                    numbers = []
-                    for j in range(len(axis)-1):
-                        numbers.append(insertion[count%len(insertion)].Direction.X)
-                        numbers.append(insertion[count%len(insertion)].Direction.Y)
-                        numbers.append(insertion[count%len(insertion)].Direction.Z)
-                        count = count + 1
-                    directions_matched_to_axes.append(numbers)
-                str_insertion = str(directions_matched_to_axes)
-            else:
-                str_insertion = "-"
+        # pair_polyline_merged
+        list_coordinates = []
+        for idx, polyline in enumerate(pair_polyline_merged):
+            coordinates = []
+            for i in range(polyline.Count):
+                coordinates.extend([polyline[i].X, polyline[i].Y, polyline[i].Z])
+            list_coordinates.append(coordinates)
+        
+        obj.Attributes.SetUserString("pair_polyline_merged", str(list_coordinates) if len(list_coordinates) > 0 else "-")
 
-        obj.Attributes.SetUserString("insertion", str_insertion)
-    
-        # joints_types
-        # TODO: Implement joints types by closest point search        
-        str_joint_types = "-"
-        if element_type == "beam":
-            str_joint_types_list = []
-            for joint_type in joints_types:
-                try:
-                    str_joint_types_list.append(int(joint_type.Text))
-                except:
-                    print("Joint type must be an integer.")
-            str_joint_types = str(str_joint_types_list)
-        elif element_type == "plate":
-            # Closest point search per object edge
-            pass
-
-        obj.Attributes.SetUserString("joint_types", str_joint_types)
-
-
-        # Axes
-        bbox = geometry.GetBoundingBox(True)
+        # axes
+        bbox = shape.GetBoundingBox(True)
         str_axes = ""
         if not axes:
             str_axes = "[[0,0,0,0,0,"+ str(bbox.Max.Z-bbox.Min.Z) + "]]"
@@ -395,7 +491,7 @@ class Element():
 
         obj.Attributes.SetUserString("axes", str_axes)
 
-        # Radius for beams per segment
+        # radii - per polyline segment
         str_radii = ""
         if len(radii) == 0:
             distance = abs(bbox.Max.X-bbox.Min.X)*0.5
@@ -412,38 +508,23 @@ class Element():
             str_radii = str(radii_matched_to_axes)
         obj.Attributes.SetUserString("radii", str_radii)
 
-        # Thickness for plates
-        text_thickness = "-"
-        if not thickness:
-            pass
-        obj.Attributes.SetUserString("thickness", text_thickness)
+        # thickness
+        obj.Attributes.SetUserString("thickness", str(thickness) if thickness else "-")
 
-        # Thickness for volumes
-        text_volumes= "-"
-    
-        obj.Attributes.SetUserString("volumes", text_volumes)
+        # insertion - this attribute must be handled by a seprate command using closest point search
+        obj.Attributes.SetUserString("insertion", "-")
+        for line in insertion:
+            NotImplementedError("Insertion is not implemented, closest point search is needed.")
 
-        # Thickness for volumes
-        text_joints= "-"
-        obj.Attributes.SetUserString("joints", text_joints)
-            
+        # joints_types - this attribute must be handled by a seprate command using closest point search
+        obj.Attributes.SetUserString("joint_types", "-")
+        for textdot in joint_types:
+            NotImplementedError("Joint types are not implemented, closest point search is needed.")
+
+        # Commit changes and redraw
         obj.CommitChanges()
-
-        # Redraw view
         Rhino.RhinoDoc.ActiveDoc.Views.Redraw()
 
 
     def __repr__(self):
-        return (f"Element(\n"
-                f"  geometry_plane={self.geometry_plane},\n"
-                f"  element_type={self.elementy_type},\n"
-                f"  geometry={self.geometry},\n"
-                f"  plane={self.plane},\n"
-                f"  features={self.features},\n"
-                f"  insertion={self.insertion},\n"
-                f"  axes={self.axes}, number of axes={len(self.axes)} number of points={self.axes[0].Count},\n"
-                f"  radii={self.radii},\n"
-                f"  volumes={self.volumes},\n"
-                f"  thickness={self.thickness},\n"
-                f"  joints={self.joints}\n"
-                f")")
+        return f"Element"

@@ -216,6 +216,8 @@ def generalized_input_method(
 
     for option_name, (default_value, value_type) in input_dict.items():
 
+        print("option_name ",option_name, value_type, value_type is typing.List[wood_rui.Element])
+
         # print(option_name, value_type)
         if value_type is float:
             # print(option_name, "float")
@@ -234,39 +236,50 @@ def generalized_input_method(
             get_options.AddOptionInteger(option_name, dict_options[option_name])
         elif value_type is bool:
             # print(option_name, "bool")
-            dict_options[option_name] = Rhino.Input.Custom.OptionToggle(default_value, "Yes", "No")
+            dict_options[option_name] = Rhino.Input.Custom.OptionToggle(default_value, "No", "Yes")
             dict_values[option_name] = dict_options[option_name].CurrentValue
             get_options.AddOptionToggle(option_name, dict_options[option_name])
         elif value_type is typing.List[float]:  # List of floats
+            dict_values[option_name] = []
             # print(option_name, "list float")
             get_options.AddOption(option_name)
         elif value_type is typing.List[int]:  # List of ints
+            dict_values[option_name] = []
             # print(option_name, "list int")
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.TextDot]:  # List of textdots
+            dict_values[option_name] = []
             # print(option_name, "list textdot")
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.Line]:  # List of lines
+            dict_values[option_name] = []
             # print(option_name, "list line")
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.Polyline]:  # List of polylines
+            dict_values[option_name] = []
             # print(option_name, "list polyline")
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.Mesh]:  # List of polylines
+            dict_values[option_name] = []
             # print(option_name, "list mesh")
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.Brep]:  # List of polylines
+            dict_values[option_name] = []
             # print(option_name, "list brep")
             get_options.AddOption(option_name)
         elif value_type is typing.List[wood_rui.Element]:  # List of polylines
+            dict_values[option_name] = []
             # print(option_name, "list group")
             get_options.AddOption(option_name)
         elif value_type is Callable:
+            dict_values[option_name] = None
             # print(option_name, "Callable")
             get_options.AddOption(option_name)
 
+    
+
     # Run external method to update geometry each time the input is changed.
-    if not dict_values:
+    if len(dict_values)!=0:
         callback(dict_values, dataset_name)
 
     # Set default values
@@ -338,7 +351,7 @@ def generalized_input_method(
                 if result:
                     elements = []
                     for r in result:
-                        element = wood_rui.Element(r)
+                        element = wood_rui.Element(r, compute_user_strings=False)
                         elements.append(element)
                     dict_values[option_name] = elements
 
@@ -355,7 +368,7 @@ def generalized_input_method(
             done = True  # Exit the loop by setting done to True
         
     if not run_when_input_changed:
-        if dict_values:
+        if len(dict_values)!=0:
             callback(dict_values, dataset_name)
 
     # Final output and return success
