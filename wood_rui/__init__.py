@@ -1,8 +1,9 @@
 from .layer import (
-    ensure_layer_exists, 
-    get_objects_by_layer, 
-    delete_objects_in_layer, 
-    add_sub_layer)
+    ensure_layer_exists,
+    get_objects_by_layer,
+    delete_objects_in_layer,
+    add_sub_layer,
+)
 from .object import (
     delete_objects,
     add_polylines,
@@ -27,12 +28,12 @@ from .command import (
     handle_numbers_input,
     handle_integers_input,
     handle_textdots_input,
+    handle_points_input,
     handle_polylines_input,
     handle_lines_input,
     handle_mesh_input,
     handle_brep_input,
-    handle_solid_input
-
+    handle_solid_input,
 )
 from .groups import (
     select_and_find_valid_groups,
@@ -40,10 +41,7 @@ from .groups import (
     polyline_to_plane,
 )
 
-from .element import (
-    Element,
-    ElementyType
-)
+from .element import Element
 
 __all__ = [
     "ensure_layer_exists",
@@ -72,6 +70,7 @@ __all__ = [
     "handle_numbers_input",
     "handle_integers_input",
     "handle_textdots_input",
+    "handle_points_input",
     "handle_polylines_input",
     "handle_lines_input",
     "handle_mesh_input",
@@ -81,5 +80,4 @@ __all__ = [
     "polyline_obj_to_plane",
     "polyline_to_plane",
     "Element",
-    "ElementyType"
 ]

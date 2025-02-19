@@ -3,7 +3,11 @@ class Globals(object):
 
     # Dictionary to store singleton instances per plugin
     _instances = {}
-    scale = [1.0, 1.0, 1.0]  # temporary parameter that must go from compas_wood.binding import wood_globals
+    scale = [
+        1.0,
+        1.0,
+        1.0,
+    ]  # temporary parameter that must go from compas_wood.binding import wood_globals
     search_type = 0  # temporary parameter that must go from compas_wood.binding import wood_globals
     joint_volume_extension = [
         0.0,
@@ -29,7 +33,6 @@ class Globals(object):
             self.reset()
 
     def init_data(self, name):
-
         from System.Drawing import Color
         from .layer import ensure_layer_exists as create_layer
 
@@ -92,7 +95,11 @@ class Globals(object):
         self.dataset.clear()
         self.plugin_name = "compas_wood"
         self.init_data("default")
-        self.scale = [1.0, 1.0, 1.0]  # temporary parameter that must go from compas_wood.binding import wood_globals
+        self.scale = [
+            1.0,
+            1.0,
+            1.0,
+        ]  # temporary parameter that must go from compas_wood.binding import wood_globals
         self.search_type = 0  # temporary parameter that must go from compas_wood.binding import wood_globals
         self.joint_volume_extension = [
             0.0,
@@ -113,9 +120,16 @@ class Globals(object):
         for key, value in dataset.items():
             formatted += " " * indent + f"{key}: "
             if isinstance(value, dict):
-                formatted += "{\n" + self._format_dataset(value, indent + 2) + " " * indent + "}\n"
+                formatted += (
+                    "{\n"
+                    + self._format_dataset(value, indent + 2)
+                    + " " * indent
+                    + "}\n"
+                )
             elif isinstance(value, list):
-                formatted += "[\n" + self._format_list(value, indent + 2) + " " * indent + "]\n"
+                formatted += (
+                    "[\n" + self._format_list(value, indent + 2) + " " * indent + "]\n"
+                )
             else:
                 formatted += f"{value}\n"
         return formatted
@@ -125,9 +139,21 @@ class Globals(object):
         formatted = ""
         for item in lst:
             if isinstance(item, dict):
-                formatted += " " * indent + "{\n" + self._format_dataset(item, indent + 2) + " " * indent + "},\n"
+                formatted += (
+                    " " * indent
+                    + "{\n"
+                    + self._format_dataset(item, indent + 2)
+                    + " " * indent
+                    + "},\n"
+                )
             elif isinstance(item, list):
-                formatted += " " * indent + "[\n" + self._format_list(item, indent + 2) + " " * indent + "],\n"
+                formatted += (
+                    " " * indent
+                    + "[\n"
+                    + self._format_list(item, indent + 2)
+                    + " " * indent
+                    + "],\n"
+                )
             else:
                 formatted += " " * indent + f"{item},\n"
         return formatted

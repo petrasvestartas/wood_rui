@@ -7,6 +7,7 @@ import ast
 
 NestedList = Union[Any, List["NestedList"]]
 
+
 def _flatten_recursive(nested_list: NestedList) -> list[any]:
     flattened = []
     for item in nested_list:
@@ -32,7 +33,10 @@ def add_mesh(mesh, data_name):
     """Add a mesh to the specified layer and return the mesh's GUID."""
 
     layer_index = ensure_layer_exists("compas_wood", data_name, "mesh", Color.Black)
-    if "mesh_guid" in wood_rui_globals[data_name] and wood_rui_globals[data_name]["mesh_guid"] is not None:
+    if (
+        "mesh_guid" in wood_rui_globals[data_name]
+        and wood_rui_globals[data_name]["mesh_guid"] is not None
+    ):
         delete_objects(wood_rui_globals[data_name]["mesh_guid"])
         wood_rui_globals[data_name]["mesh_guid"] = None
         wood_rui_globals[data_name]["mesh"] = None
@@ -58,7 +62,12 @@ def add_mesh(mesh, data_name):
         return None
 
 
-def add_polylines(polylines: NestedList, sublayer_name: str, subsublayer_name : str = "polylines", delete_existing = True) -> None:
+def add_polylines(
+    polylines: NestedList,
+    sublayer_name: str,
+    subsublayer_name: str = "polylines",
+    delete_existing=True,
+) -> None:
     """Add a list of polylines to the specified layer and return their GUIDs.
 
     Parameters
@@ -76,12 +85,20 @@ def add_polylines(polylines: NestedList, sublayer_name: str, subsublayer_name : 
 
     polylines_flattenend = _flatten_recursive(polylines)
 
-    layer_index = ensure_layer_exists("compas_wood", sublayer_name, subsublayer_name, Color.DodgerBlue, delete_existing=delete_existing)
+    layer_index = ensure_layer_exists(
+        "compas_wood",
+        sublayer_name,
+        subsublayer_name,
+        Color.DodgerBlue,
+        delete_existing=delete_existing,
+    )
 
     # polyline_guids = []
     for idx, polyline in enumerate(polylines_flattenend):
         if polyline:
-            obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddCurve(polyline.ToNurbsCurve())
+            obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddCurve(
+                polyline.ToNurbsCurve()
+            )
             if obj_guid:
                 obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(obj_guid)
                 if obj:
@@ -101,14 +118,20 @@ def add_polylines(polylines: NestedList, sublayer_name: str, subsublayer_name : 
                 pass
 
     # if "polylines_guid" in wood_rui_globals[data_name]:
-        # wood_rui_globals[data_name]["polylines_guid"] = polyline_guids
-        # wood_rui_globals[data_name]["polylines"] = polylines
+    # wood_rui_globals[data_name]["polylines_guid"] = polyline_guids
+    # wood_rui_globals[data_name]["polylines"] = polylines
 
     # layer_index_dots = ensure_layer_exists("compas_wood", data_name, "joint_types", Color.MediumVioletRed)
     Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw()  # 0 ms
 
 
-def add_skeleton(polylines: list[Rhino.Geometry.Polyline], data_name: str, distances: list[list[float]] = [], meshes: list[Rhino.Geometry.Mesh] = [], transforms: list[Rhino.Geometry.Transform] = None) -> None:
+def add_skeleton(
+    polylines: list[Rhino.Geometry.Polyline],
+    data_name: str,
+    distances: list[list[float]] = [],
+    meshes: list[Rhino.Geometry.Mesh] = [],
+    transforms: list[Rhino.Geometry.Transform] = None,
+) -> None:
     """Add a list of polylines to the specified layer and return their GUIDs.
 
     Parameters
@@ -119,12 +142,16 @@ def add_skeleton(polylines: list[Rhino.Geometry.Polyline], data_name: str, dista
         Name of dataset.
 
     """
-    layer_index = ensure_layer_exists("compas_wood", data_name, "skeleton", Color.DodgerBlue)
+    layer_index = ensure_layer_exists(
+        "compas_wood", data_name, "skeleton", Color.DodgerBlue
+    )
 
     polyline_guids = []
     for idx, polyline in enumerate(polylines):
         if polyline:
-            obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddCurve(polyline.ToNurbsCurve())
+            obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddCurve(
+                polyline.ToNurbsCurve()
+            )
             if obj_guid:
                 obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(obj_guid)
                 if obj:
@@ -135,17 +162,31 @@ def add_skeleton(polylines: list[Rhino.Geometry.Polyline], data_name: str, dista
                     obj.Attributes.SetUserString("dataset", data_name)
                     obj.Attributes.SetUserString("type", "axes")
 
-                    string_distances : str = ''.join(str(num) for num in distances[idx])
+                    string_distances: str = "".join(str(num) for num in distances[idx])
                     obj.Attributes.SetUserString("distances", string_distances)
 
                     if meshes:
                         string_vertices = ""
                         for vertex in meshes[idx].Vertices:
-                            string_vertices += str(vertex.X) + "," + str(vertex.Y) + "," + str(vertex.Z) + ","
+                            string_vertices += (
+                                str(vertex.X)
+                                + ","
+                                + str(vertex.Y)
+                                + ","
+                                + str(vertex.Z)
+                                + ","
+                            )
 
                         string_faces = ""
                         for face in meshes[idx].Faces:
-                            string_faces += str(face.A) + "," + str(face.B) + "," + str(face.C) + ","
+                            string_faces += (
+                                str(face.A)
+                                + ","
+                                + str(face.B)
+                                + ","
+                                + str(face.C)
+                                + ","
+                            )
 
                         obj.Attributes.SetUserString("vertices", string_vertices)
                         obj.Attributes.SetUserString("faces", string_faces)
@@ -157,7 +198,6 @@ def add_skeleton(polylines: list[Rhino.Geometry.Polyline], data_name: str, dista
                             string_transformation += str(number) + ","
                         obj.Attributes.SetUserString("transform", string_transformation)
 
-        
                     obj.CommitChanges()
                 else:
                     pass
@@ -169,11 +209,10 @@ def add_skeleton(polylines: list[Rhino.Geometry.Polyline], data_name: str, dista
     wood_rui_globals[data_name]["polylines_guid"] = polyline_guids
     wood_rui_globals[data_name]["polylines"] = polylines
 
-    layer_index_dots = ensure_layer_exists("compas_wood", data_name, "joint_types", Color.MediumVioletRed)
+    layer_index_dots = ensure_layer_exists(
+        "compas_wood", data_name, "joint_types", Color.MediumVioletRed
+    )
     Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw()  # 0 ms
-
-
-
 
 
 def add_insertion_lines(lines, data_name):
@@ -200,28 +239,29 @@ def add_insertion_lines(lines, data_name):
 
 
 def add_adjacency(four_indices_face_face_edge_edge, data_name):
-
     wood_rui_globals[data_name]["adjacency"] = four_indices_face_face_edge_edge
 
     Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw()  # 0 ms
 
 
 def add_flags(flags, data_name):
-
     wood_rui_globals[data_name]["flags"] = flags
 
 
 def add_insertion_vectors(insertion_vectors, data_name):
-
     wood_rui_globals[data_name]["insertion_vectors"] = insertion_vectors
 
     polylines_guid = wood_rui_globals[data_name]["polylines_guid"]
-    for idx, (obj_guid1, obj_guid2) in enumerate(zip(polylines_guid[0::2], polylines_guid[1::2])):
+    for idx, (obj_guid1, obj_guid2) in enumerate(
+        zip(polylines_guid[0::2], polylines_guid[1::2])
+    ):
         for obj_guid in (obj_guid1, obj_guid2):
             obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(obj_guid)
             if obj:
                 for idy, joints_type in enumerate(insertion_vectors[idx]):
-                    obj.Attributes.SetUserString("insertion_vectors" + str(idy), str(joints_type))
+                    obj.Attributes.SetUserString(
+                        "insertion_vectors" + str(idy), str(joints_type)
+                    )
                 obj.CommitChanges()
             else:
                 pass
@@ -229,7 +269,6 @@ def add_insertion_vectors(insertion_vectors, data_name):
 
 
 def add_three_valence(three_valence, data_name):
-
     wood_rui_globals[data_name]["three_valence"] = three_valence
 
 
@@ -258,7 +297,9 @@ def add_joinery(joinery: list[list[Rhino.Geometry.Polyline]], data_name: str) ->
         # Loop through individual polylines in the current group
         for polyline in polyline_group:
             # Add the polyline to the Rhino document
-            obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddCurve(polyline.ToNurbsCurve())
+            obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddCurve(
+                polyline.ToNurbsCurve()
+            )
             obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(obj_guid)
             if obj:
                 obj.Attributes.LayerIndex = layer_index  # Assign to the specified layer
@@ -271,8 +312,12 @@ def add_joinery(joinery: list[list[Rhino.Geometry.Polyline]], data_name: str) ->
         # If the group contains polylines, group them together in Rhino
         if group_guids:
             group_name = f"{data_name}_joinery_group"
-            Rhino.RhinoDoc.ActiveDoc.Groups.Add(group_guids)  # Group the polyline GUIDs together
-            joinery_guids.extend(group_guids)  # Add the group's GUIDs to the master list
+            Rhino.RhinoDoc.ActiveDoc.Groups.Add(
+                group_guids
+            )  # Group the polyline GUIDs together
+            joinery_guids.extend(
+                group_guids
+            )  # Add the group's GUIDs to the master list
 
     # If the case already has "joinery_guid", delete the previous objects
     if "joinery_guid" in wood_rui_globals[data_name]:
@@ -288,16 +333,19 @@ def add_joinery(joinery: list[list[Rhino.Geometry.Polyline]], data_name: str) ->
 
 
 def add_joint_type(joints_per_face: list[list[int]], data_name: str) -> None:
-
     wood_rui_globals[data_name]["joints_per_face"] = joints_per_face
 
     polylines_guid = wood_rui_globals[data_name]["polylines_guid"]
-    for idx, (obj_guid1, obj_guid2) in enumerate(zip(polylines_guid[0::2], polylines_guid[1::2])):
+    for idx, (obj_guid1, obj_guid2) in enumerate(
+        zip(polylines_guid[0::2], polylines_guid[1::2])
+    ):
         for obj_guid in (obj_guid1, obj_guid2):
             obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(obj_guid)
             if obj:
                 for idy, joints_type in enumerate(joints_per_face[idx]):
-                    obj.Attributes.SetUserString("joints_per_face_" + str(idy), str(joints_type))
+                    obj.Attributes.SetUserString(
+                        "joints_per_face_" + str(idy), str(joints_type)
+                    )
                 obj.CommitChanges()
             else:
                 pass
@@ -306,7 +354,7 @@ def add_joint_type(joints_per_face: list[list[int]], data_name: str) -> None:
 
 def add_loft_brep(brep_lists, data_name, element_ids=None):
     """Add a list of lofted polylines with holes as breps to the specified layer and return their GUIDs."""
-    
+
     layer_index = ensure_layer_exists("compas_wood", data_name, "loft", Color.Black)
 
     brep_lists_guids = []
@@ -358,7 +406,10 @@ def add_loft_mesh(meshes, data_name):
 
 
 def add_axes(
-    polylines: list[Rhino.Geometry.Polyline], data_name: str, group_indices: list[int] = None, brep_shapes=None
+    polylines: list[Rhino.Geometry.Polyline],
+    data_name: str,
+    group_indices: list[int] = None,
+    brep_shapes=None,
 ) -> None:
     """Add a list of polylines to the specified layer and return their GUIDs.
 
@@ -371,7 +422,9 @@ def add_axes(
 
     """
 
-    layer_index = ensure_layer_exists("compas_wood", data_name, "axes", Color.DodgerBlue)
+    layer_index = ensure_layer_exists(
+        "compas_wood", data_name, "axes", Color.DodgerBlue
+    )
 
     shape_guids = []
     shapes_added = []
@@ -379,7 +432,6 @@ def add_axes(
         shape = brep_shapes[idx] if brep_shapes[idx] and len(brep_shapes) else polyline
 
         if polyline:
-
             obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.Add(shape)
             shapes_added.append(shape)
             if obj_guid:
@@ -393,7 +445,9 @@ def add_axes(
                     obj.Attributes.SetUserString("type", "axes")
 
                     if group_indices and len(group_indices) > idx:
-                        obj.Attributes.SetUserString("group_index", str(group_indices[idx]))
+                        obj.Attributes.SetUserString(
+                            "group_index", str(group_indices[idx])
+                        )
                     obj.CommitChanges()
                 else:
                     pass

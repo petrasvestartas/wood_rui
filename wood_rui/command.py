@@ -19,7 +19,9 @@ def handle_string_input(option_name: str) -> str:
 def handle_numbers_input(option_name: str) -> list[float]:
     """Get numbers from user input."""
     go = Rhino.Input.Custom.GetString()
-    go.SetCommandPrompt(f"Enter {option_name} as comma-separated values (e.g., 0.0, 1.0, 2.5)")
+    go.SetCommandPrompt(
+        f"Enter {option_name} as comma-separated values (e.g., 0.0, 1.0, 2.5)"
+    )
 
     if go.Get() != Rhino.Input.GetResult.String:
         Rhino.RhinoApp.WriteLine("Nothing is selected, returning to main menu.")
@@ -29,14 +31,18 @@ def handle_numbers_input(option_name: str) -> list[float]:
     try:
         return [float(val.strip()) for val in input_str.split(",")]
     except ValueError:
-        Rhino.RhinoApp.WriteLine("Invalid input. Please enter valid numbers separated by commas.")
+        Rhino.RhinoApp.WriteLine(
+            "Invalid input. Please enter valid numbers separated by commas."
+        )
         return []
 
 
 def handle_integers_input(option_name: str) -> list[int]:
     """Get integers from user input."""
     go = Rhino.Input.Custom.GetString()
-    go.SetCommandPrompt(f"Enter {option_name} as comma-separated integers (e.g., 1, 2, 3)")
+    go.SetCommandPrompt(
+        f"Enter {option_name} as comma-separated integers (e.g., 1, 2, 3)"
+    )
 
     if go.Get() != Rhino.Input.GetResult.String:
         Rhino.RhinoApp.WriteLine("Nothing is selected, returning to main menu.")
@@ -46,11 +52,15 @@ def handle_integers_input(option_name: str) -> list[int]:
     try:
         return [int(val.strip()) for val in input_str.split(",")]
     except ValueError:
-        Rhino.RhinoApp.WriteLine("Invalid input. Please enter valid integers separated by commas.")
+        Rhino.RhinoApp.WriteLine(
+            "Invalid input. Please enter valid integers separated by commas."
+        )
         return []
 
 
-def handle_textdots_input(option_name: str, hide : bool = True) -> list[Rhino.Geometry.TextDot]:
+def handle_textdots_input(
+    option_name: str, hide: bool = True
+) -> list[Rhino.Geometry.TextDot]:
     """Select textdots from Rhino document."""
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
@@ -60,15 +70,43 @@ def handle_textdots_input(option_name: str, hide : bool = True) -> list[Rhino.Ge
     go.DeselectAllBeforePostSelect = False
     res = go.GetMultiple(1, 0)
 
-
-    textdots = []  
+    textdots = []
     if go.CommandResult() == Rhino.Commands.Result.Success:
-        textdots = [go.Object(i).TextDot() for i in range(go.ObjectCount) if go.Object(i).TextDot()]
+        textdots = [
+            go.Object(i).TextDot()
+            for i in range(go.ObjectCount)
+            if go.Object(i).TextDot()
+        ]
 
     return textdots
 
 
-def handle_polylines_input(option_name: str, hide : bool = True) -> list[Rhino.Geometry.Polyline]:
+def handle_points_input(
+    option_name: str, hide: bool = True
+) -> list[Rhino.Geometry.Point3d]:
+    """Select points from Rhino document."""
+    go = Rhino.Input.Custom.GetObject()
+    go.SetCommandPrompt(f"Select {option_name}")
+    go.GeometryFilter = Rhino.DocObjects.ObjectType.Point  # Filter to curves
+    go.EnablePreSelect(True, True)
+    go.SubObjectSelect = False
+    go.DeselectAllBeforePostSelect = False
+    res = go.GetMultiple(1, 0)
+
+    points = []
+    if go.CommandResult() == Rhino.Commands.Result.Success:
+        points = [
+            go.Object(i).Point().Location
+            for i in range(go.ObjectCount)
+            if go.Object(i).Point().Location
+        ]
+
+    return points
+
+
+def handle_polylines_input(
+    option_name: str, hide: bool = True
+) -> list[Rhino.Geometry.Polyline]:
     """Select polylines from Rhino document."""
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
@@ -78,22 +116,27 @@ def handle_polylines_input(option_name: str, hide : bool = True) -> list[Rhino.G
     go.DeselectAllBeforePostSelect = False
     res = go.GetMultiple(1, 0)
 
-
-    polylines = []  
+    polylines = []
     if go.CommandResult() == Rhino.Commands.Result.Success:
-        selected_curves = [go.Object(i).Curve() for i in range(go.ObjectCount) if go.Object(i).Curve()]
-        
+        selected_curves = [
+            go.Object(i).Curve() for i in range(go.ObjectCount) if go.Object(i).Curve()
+        ]
+
         for curve in selected_curves:
             result, polyline = curve.TryGetPolyline()
             if result:
                 polylines.append(polyline)
             else:
-                Rhino.RhinoApp.WriteLine("One of the selected curves could not be converted to a polyline.")
-        
+                Rhino.RhinoApp.WriteLine(
+                    "One of the selected curves could not be converted to a polyline."
+                )
+
     return polylines
 
 
-def handle_lines_input(option_name: str, hide : bool = True) -> list[Rhino.Geometry.Line]:
+def handle_lines_input(
+    option_name: str, hide: bool = True
+) -> list[Rhino.Geometry.Line]:
     """Select lines from Rhino document."""
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
@@ -105,9 +148,13 @@ def handle_lines_input(option_name: str, hide : bool = True) -> list[Rhino.Geome
 
     lines = []
     if go.CommandResult() == Rhino.Commands.Result.Success:
-        selected_curves = [go.Object(i).Curve() for i in range(go.ObjectCount) if go.Object(i).Curve()]
-        lines = [Rhino.Geometry.Line(c.PointAtStart, c.PointAtEnd) for c in selected_curves]
-        
+        selected_curves = [
+            go.Object(i).Curve() for i in range(go.ObjectCount) if go.Object(i).Curve()
+        ]
+        lines = [
+            Rhino.Geometry.Line(c.PointAtStart, c.PointAtEnd) for c in selected_curves
+        ]
+
     return lines
 
 
@@ -123,27 +170,31 @@ def handle_mesh_input(option_name: str, hide: bool = True) -> list[Rhino.Geometr
 
     selected_meshes = []
     if go.CommandResult() == Rhino.Commands.Result.Success:
-        
         for i in range(go.ObjectCount):
             rhino_obj = go.Object(i).Object()  # Get the RhinoObject
-            
+
             if hide:
                 Rhino.RhinoDoc.ActiveDoc.Objects.Hide(rhino_obj.Id, True)
-            
-            if rhino_obj and rhino_obj.Geometry and isinstance(rhino_obj.Geometry, Rhino.Geometry.Mesh):
+
+            if (
+                rhino_obj
+                and rhino_obj.Geometry
+                and isinstance(rhino_obj.Geometry, Rhino.Geometry.Mesh)
+            ):
                 selected_meshes.append(rhino_obj.Geometry)
-        
+
         Rhino.RhinoDoc.ActiveDoc.Views.Redraw()  # Refresh view after hiding objects
-        
 
     return selected_meshes
 
 
-def handle_brep_input(option_name: str, hide : bool = True) -> list[Rhino.Geometry.Brep]:
+def handle_brep_input(option_name: str, hide: bool = True) -> list[Rhino.Geometry.Brep]:
     """Select Breps from Rhino document."""
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
-    go.GeometryFilter =Rhino.DocObjects.ObjectType.Surface | Rhino.DocObjects.ObjectType.PolysrfFilter # Filter to curves
+    go.GeometryFilter = (
+        Rhino.DocObjects.ObjectType.Surface | Rhino.DocObjects.ObjectType.PolysrfFilter
+    )  # Filter to curves
     go.EnablePreSelect(True, True)
     go.SubObjectSelect = False
     go.DeselectAllBeforePostSelect = False
@@ -160,12 +211,18 @@ def handle_brep_input(option_name: str, hide : bool = True) -> list[Rhino.Geomet
     return selected_breps
 
 
-def handle_solid_input(option_name: str, hide: bool = True) -> Tuple[list[Rhino.Geometry.Brep], list[Rhino.Geometry.Mesh]]:
+def handle_solid_input(
+    option_name: str, hide: bool = True
+) -> Tuple[list[Rhino.Geometry.Brep], list[Rhino.Geometry.Mesh]]:
     """Select Breps and Meshes from Rhino document."""
 
     go = Rhino.Input.Custom.GetObject()
     go.SetCommandPrompt(f"Select {option_name}")
-    Rhino.DocObjects.ObjectType.Surface | Rhino.DocObjects.ObjectType.PolysrfFilter | Rhino.DocObjects.ObjectType.Mesh  # Filter to Breps and Meshes
+    (
+        Rhino.DocObjects.ObjectType.Surface
+        | Rhino.DocObjects.ObjectType.PolysrfFilter
+        | Rhino.DocObjects.ObjectType.Mesh
+    )  # Filter to Breps and Meshes
     go.EnablePreSelect(True, True)
     go.SubObjectSelect = False
     go.DeselectAllBeforePostSelect = False
@@ -174,7 +231,6 @@ def handle_solid_input(option_name: str, hide: bool = True) -> Tuple[list[Rhino.
     selected_breps = []
     selected_meshes = []
     if go.CommandResult() == Rhino.Commands.Result.Success:
-
         for i in range(go.ObjectCount):
             rhino_obj = go.Object(i)  # Get the RhinoObject
 
@@ -192,20 +248,28 @@ def handle_solid_input(option_name: str, hide: bool = True) -> Tuple[list[Rhino.
     return selected_breps, selected_meshes
 
 
-# Main method that 
+# Main method that
 def generalized_input_method(
-    
     dataset_name: str,
     input_dict: Dict[
         str,
         Tuple[
-            Union[float, int, list[float], list[int], list[Rhino.Geometry.Line], list[Rhino.Geometry.Polyline], list[Rhino.Geometry.Mesh], list[Rhino.Geometry.Brep]], type
+            Union[
+                float,
+                int,
+                list[float],
+                list[int],
+                list[Rhino.Geometry.Line],
+                list[Rhino.Geometry.Polyline],
+                list[Rhino.Geometry.Mesh],
+                list[Rhino.Geometry.Brep],
+            ],
+            type,
         ],
-    
     ],
     callback=None,
     run_when_input_changed=True,
-    hide_input = False
+    hide_input=False,
 ) -> None:
     """Processes input types based on the input dictionary."""
     get_options = Rhino.Input.Custom.GetOption()
@@ -215,13 +279,19 @@ def generalized_input_method(
     dict_values = {}
 
     for option_name, (default_value, value_type) in input_dict.items():
-
-        print("option_name ",option_name, value_type, value_type is typing.List[wood_rui.Element])
+        print(
+            "option_name ",
+            option_name,
+            value_type,
+            value_type is typing.List[wood_rui.Element],
+        )
 
         # print(option_name, value_type)
         if value_type is float:
             # print(option_name, "float")
-            dict_options[option_name] = Rhino.Input.Custom.OptionDouble(default_value)  # float
+            dict_options[option_name] = Rhino.Input.Custom.OptionDouble(
+                default_value
+            )  # float
             dict_values[option_name] = dict_options[option_name].CurrentValue
             get_options.AddOptionDouble(option_name, dict_options[option_name])
         elif value_type is typing.List[str]:
@@ -231,12 +301,16 @@ def generalized_input_method(
             opList = get_options.AddOptionList(option_name, default_value, 0)
         elif value_type is int:
             # print(option_name, "int")
-            dict_options[option_name] = Rhino.Input.Custom.OptionInteger(default_value)  # int
+            dict_options[option_name] = Rhino.Input.Custom.OptionInteger(
+                default_value
+            )  # int
             dict_values[option_name] = dict_options[option_name].CurrentValue
             get_options.AddOptionInteger(option_name, dict_options[option_name])
         elif value_type is bool:
             # print(option_name, "bool")
-            dict_options[option_name] = Rhino.Input.Custom.OptionToggle(default_value, "No", "Yes")
+            dict_options[option_name] = Rhino.Input.Custom.OptionToggle(
+                default_value, "No", "Yes"
+            )
             dict_values[option_name] = dict_options[option_name].CurrentValue
             get_options.AddOptionToggle(option_name, dict_options[option_name])
         elif value_type is typing.List[float]:  # List of floats
@@ -248,6 +322,10 @@ def generalized_input_method(
             # print(option_name, "list int")
             get_options.AddOption(option_name)
         elif value_type is typing.List[Rhino.Geometry.TextDot]:  # List of textdots
+            dict_values[option_name] = []
+            # print(option_name, "list textdot")
+            get_options.AddOption(option_name)
+        elif value_type is typing.List[Rhino.Geometry.Point3d]:  # List of textdots
             dict_values[option_name] = []
             # print(option_name, "list textdot")
             get_options.AddOption(option_name)
@@ -276,10 +354,8 @@ def generalized_input_method(
             # print(option_name, "Callable")
             get_options.AddOption(option_name)
 
-    
-
     # Run external method to update geometry each time the input is changed.
-    if len(dict_values)!=0:
+    if len(dict_values) != 0:
         callback(dict_values, dataset_name)
 
     # Set default values
@@ -309,49 +385,74 @@ def generalized_input_method(
                 dict_values[option_name] = dict_options[option_name].CurrentValue
                 # print("dict_values[option_name]", dict_options[option_name].CurrentValue)
             elif input_type is typing.List[str]:
-                dict_values[option_name] = input_dict[option_name][0][get_options.Option().CurrentListOptionIndex]
+                dict_values[option_name] = input_dict[option_name][0][
+                    get_options.Option().CurrentListOptionIndex
+                ]
                 # print("dict_values[option_name]", dict_values[option_name])
             elif input_type is typing.List[float]:
                 result = handle_numbers_input(option_name, hide_input)
                 if result:
                     dict_values[option_name] = result
-                    Rhino.RhinoApp.WriteLine(f"Selected numbers for {option_name}: {result}")
+                    Rhino.RhinoApp.WriteLine(
+                        f"Selected numbers for {option_name}: {result}"
+                    )
             elif input_type is typing.List[int]:
                 result = handle_numbers_input(option_name, hide_input)
                 if result:
                     dict_values[option_name] = result
-                    Rhino.RhinoApp.WriteLine(f"Selected integers for {option_name}: {result}")
+                    Rhino.RhinoApp.WriteLine(
+                        f"Selected integers for {option_name}: {result}"
+                    )
             elif input_type is typing.List[Rhino.Geometry.TextDot]:  # List of TextDot
                 result = handle_textdots_input(option_name, hide_input)
                 if result:
                     dict_values[option_name] = result
-                    Rhino.RhinoApp.WriteLine(f"Selected textdots for {option_name}: {len(result)} textdots selected.")
+                    Rhino.RhinoApp.WriteLine(
+                        f"Selected textdots for {option_name}: {len(result)} textdots selected."
+                    )
+            elif input_type is typing.List[Rhino.Geometry.Point3d]:  # List of TextDot
+                result = handle_points_input(option_name, hide_input)
+                if result:
+                    dict_values[option_name] = result
+                    Rhino.RhinoApp.WriteLine(
+                        f"Selected points for {option_name}: {len(result)} points selected."
+                    )
             elif input_type is typing.List[Rhino.Geometry.Line]:  # List of Line
                 result = handle_lines_input(option_name, hide_input)
                 if result:
                     dict_values[option_name] = result
-                    Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} lines selected.")
+                    Rhino.RhinoApp.WriteLine(
+                        f"Selected lines for {option_name}: {len(result)} lines selected."
+                    )
             elif input_type is typing.List[Rhino.Geometry.Polyline]:  # List of Polyline
                 result = handle_polylines_input(option_name, hide_input)
                 if result:
                     dict_values[option_name] = result
-                    Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} polylines selected.")
+                    Rhino.RhinoApp.WriteLine(
+                        f"Selected lines for {option_name}: {len(result)} polylines selected."
+                    )
             elif input_type is typing.List[Rhino.Geometry.Mesh]:  # List of Mesh
                 result = handle_mesh_input(option_name, hide_input)
                 if result:
                     dict_values[option_name] = result
-                    Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} meshes selected.")
+                    Rhino.RhinoApp.WriteLine(
+                        f"Selected lines for {option_name}: {len(result)} meshes selected."
+                    )
             elif input_type is typing.List[Rhino.Geometry.Brep]:  # List of Mesh
                 result = handle_brep_input(option_name, hide_input)
                 if result:
                     dict_values[option_name] = result
-                    Rhino.RhinoApp.WriteLine(f"Selected lines for {option_name}: {len(result)} breps selected.")
+                    Rhino.RhinoApp.WriteLine(
+                        f"Selected lines for {option_name}: {len(result)} breps selected."
+                    )
             elif input_type is typing.List[wood_rui.Element]:  # List of Element
-                result = wood_rui.select_and_find_valid_groups("Elements")  # geometry_planes
+                result = wood_rui.select_and_find_valid_groups(
+                    "Elements"
+                )  # geometry_planes
                 if result:
                     elements = []
                     for r in result:
-                        element = wood_rui.Element(r, compute_user_strings=False)
+                        element = wood_rui.Element(r)
                         elements.append(element)
                     dict_values[option_name] = elements
 
@@ -363,12 +464,16 @@ def generalized_input_method(
             if run_when_input_changed:
                 callback(dict_values, dataset_name)
 
-        elif res == Rhino.Input.GetResult.Nothing or res == Rhino.Input.GetResult.Cancel:
-            Rhino.RhinoApp.WriteLine("No option selected or operation canceled. Exiting...")
+        elif (
+            res == Rhino.Input.GetResult.Nothing or res == Rhino.Input.GetResult.Cancel
+        ):
+            Rhino.RhinoApp.WriteLine(
+                "No option selected or operation canceled. Exiting..."
+            )
             done = True  # Exit the loop by setting done to True
-        
+
     if not run_when_input_changed:
-        if len(dict_values)!=0:
+        if len(dict_values) != 0:
             callback(dict_values, dataset_name)
 
     # Final output and return success

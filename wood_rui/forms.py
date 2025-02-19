@@ -123,10 +123,14 @@ class NamedValuesForm(Eto.Forms.Dialog[bool]):
         table.DataStore = collection
 
         layout = Eto.Forms.DynamicLayout()
-        layout.BeginVertical(Eto.Drawing.Padding(0, 0, 0, 0), Eto.Drawing.Size(0, 0), True, True)
+        layout.BeginVertical(
+            Eto.Drawing.Padding(0, 0, 0, 0), Eto.Drawing.Size(0, 0), True, True
+        )
         layout.AddRow(table)
         layout.EndVertical()
-        layout.BeginVertical(Eto.Drawing.Padding(12, 18, 12, 24), Eto.Drawing.Size(6, 0), False, False)
+        layout.BeginVertical(
+            Eto.Drawing.Padding(12, 18, 12, 24), Eto.Drawing.Size(6, 0), False, False
+        )
         layout.AddRow(None, self.ok, self.cancel)
         layout.EndVertical()
 
@@ -170,11 +174,16 @@ class NamedValuesForm(Eto.Forms.Dialog[bool]):
                             # Attempt to evaluate non-path values
                             value = ast.literal_eval(value)
                             # Check if the evaluated value is a list of lists
-                            if isinstance(value, list) and all(isinstance(i, list) for i in value):
+                            if isinstance(value, list) and all(
+                                isinstance(i, list) for i in value
+                            ):
                                 print("List of lists detected", type(value), value)
                             else:
                                 print("Not a list of lists", type(value), value)
-                    except (ValueError, SyntaxError):  # Catch specific literal eval errors
+                    except (
+                        ValueError,
+                        SyntaxError,
+                    ):  # Catch specific literal eval errors
                         # If eval fails, we keep it as a string
                         pass
                 self.attributes.append((name, value))  # Store as tuple
@@ -267,10 +276,14 @@ class BooleanForm(Eto.Forms.Dialog[bool]):
 
         # Layout for the form
         layout = Eto.Forms.DynamicLayout()
-        layout.BeginVertical(Eto.Drawing.Padding(0, 0, 0, 0), Eto.Drawing.Size(0, 0), True, True)
+        layout.BeginVertical(
+            Eto.Drawing.Padding(0, 0, 0, 0), Eto.Drawing.Size(0, 0), True, True
+        )
         layout.AddRow(table)
         layout.EndVertical()
-        layout.BeginVertical(Eto.Drawing.Padding(12, 18, 12, 24), Eto.Drawing.Size(6, 0), False, False)
+        layout.BeginVertical(
+            Eto.Drawing.Padding(12, 18, 12, 24), Eto.Drawing.Size(6, 0), False, False
+        )
         layout.AddRow(None, self.ok, self.cancel)
         layout.EndVertical()
 
