@@ -84,7 +84,7 @@ def add_sub_layer(
         if all(obj_ids):
             group_index = Rhino.RhinoDoc.ActiveDoc.Groups.Add()
             for id in obj_ids:
-                Rhino.RhinoDoc.ActiveDoc.Groups.AddToGroup(group_index, obj_ids)
+                Rhino.RhinoDoc.ActiveDoc.Groups.AddToGroup(group_index, id)
 
     Rhino.RhinoDoc.ActiveDoc.Views.Redraw()
 

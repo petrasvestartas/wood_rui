@@ -105,9 +105,18 @@ class Element:
 
     @index.setter
     def index(self, value):
-        self._index = value
         obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
         obj.Attributes.SetUserString("index", str(value))
+        obj.CommitChanges()
+
+    @property
+    def pair_indices(self):
+        return ast.literal_eval(self.geometry_plane[0].Attributes.GetUserString("pair_indices"))
+
+    @pair_indices.setter
+    def pair_indices(self, value):
+        obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
+        obj.Attributes.SetUserString("pair_indices", str(value))
         obj.CommitChanges()
 
     @property
@@ -117,9 +126,19 @@ class Element:
 
     @neighbours.setter
     def neighbours(self, value):
-        self._neighbours = value
         obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
         obj.Attributes.SetUserString("neighbours", str(value))
+        obj.CommitChanges()
+
+    @property
+    def pair_neighbours(self):
+        value = self.geometry_plane[0].Attributes.GetUserString("pair_neighbours")
+        return ast.literal_eval(value)
+
+    @pair_neighbours.setter
+    def pair_neighbours(self, value):
+        obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
+        obj.Attributes.SetUserString("pair_neighbours", str(value))
         obj.CommitChanges()
 
     @property
@@ -150,14 +169,19 @@ class Element:
         self.clear_features()
         feature_count = self.features_count
         self._features = value
+        attributes = self.geometry_plane[0].Attributes.Duplicate()
         for idx, geometry in enumerate(value):
             geometry.Transform(self.transformation_inverse)
             opts = Rhino.FileIO.SerializationOptions()
             opts.WriteUserData = True
             json = geometry.ToJSON(opts)
             obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
-            obj.Attributes.SetUserString(f"feature_{feature_count + idx}", json)
-            obj.CommitChanges()
+            attributes.SetUserString(f"feature_{feature_count + idx}", json)
+            
+        Rhino.RhinoDoc.ActiveDoc.Objects.ModifyAttributes(
+            self.geometry_plane[0], attributes, False
+        )
+        obj.CommitChanges()
 
     def clear_features(self):
         attributes = self.geometry_plane[0].Attributes.Duplicate()
@@ -193,7 +217,6 @@ class Element:
 
     @pair_polyline.setter
     def pair_polyline(self, value):
-        self._volumes = value
 
         # Write polylines to user strings
         polylines_coordinates = []
@@ -248,7 +271,6 @@ class Element:
 
     @axes.setter
     def axes(self, value):
-        self._axes = value
         polylines_coordinates = []
         for polyline in value:
             polyline_transformed = polyline.Duplicate()
@@ -278,7 +300,6 @@ class Element:
 
     @radii.setter
     def radii(self, value):
-        self._radii = value
         obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
         obj.Attributes.SetUserString("radii", str(value))
         obj.CommitChanges()
@@ -290,7 +311,6 @@ class Element:
 
     @thickness.setter
     def thickness(self, value):
-        self._thickness = value
         obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
         obj.Attributes.SetUserString("thickness", str(value))
         obj.CommitChanges()
@@ -336,7 +356,6 @@ class Element:
 
     @joint_types.setter
     def joint_types(self, value):
-        self._joint_types = value
         obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(self.geometry_plane[0].Id)
         obj.Attributes.SetUserString("joint_types", str(value))
         obj.CommitChanges()
@@ -475,6 +494,138 @@ class Element:
     @staticmethod
     def get_first_radii(elements):
         return [element.radii[0] for element in elements]
+        
+    @staticmethod
+    def loft_polylines_with_holes(input_curves0, input_curves1, color = System.Drawing.Color.Red):
+        """
+        Loft two sets of curves with holes.
+
+        Parameters
+        ----------
+        input_curves0 : list[Rhino.Geometry.Curve]
+            The curves of the first set.
+        input_curves1 : list[Rhino.Geometry.Curve]
+            The curves of the second set.
+        color : System.Drawing.Color
+            The color of the lofted solid.
+
+        Returns
+        -------
+        Rhino.Geometry.Brep
+            The lofted solid.
+        
+        """
+
+        def project_curves_to_plane(curves):
+            points = []
+            for curve in curves:
+                for point in curve.ToNurbsCurve().Points:
+                    points.append(point.Location)
+
+            result, plane = Rhino.Geometry.Plane.FitPlaneToPoints(points)
+
+            xform = Rhino.Geometry.Transform.PlanarProjection(plane)
+            curves_projected = []
+            for curve in curves:
+                curve_projected = curve.DuplicateCurve()
+                curve_projected.Transform(xform)
+                curves_projected.append(curve_projected)
+            return curves_projected
+
+        ###############################################################################
+        # user input
+        ###############################################################################
+
+        if input_curves0 == [None]:
+            return
+        if input_curves1 == [None]:
+            return
+
+        if len(input_curves0) == 0:
+            return
+        if len(input_curves1) == 0:
+            return
+
+        flag = len(input_curves0) != 0 if True else len(input_curves1) != 0
+        if flag:
+            curves = []
+            curves2 = []
+
+            flag0 = len(input_curves1) == 0
+            flag1 = len(input_curves0) == 0 and len(input_curves1) != 0
+            flag2 = len(input_curves0) and len(input_curves1)
+
+            if flag0:
+                for i in range(len(input_curves0)):
+                    if float(i) >= float(len(input_curves0)) * 0.5:
+                        curves2.Add(input_curves0[i])
+                    else:
+                        curves.Add(input_curves0[i])
+            elif flag1:
+                for i in range(0, len(input_curves1), 2):
+                    curves.Add(input_curves1[i])
+                    curves2.Add(input_curves1[i + 1])
+            elif flag2:
+                curves = input_curves0
+                curves2 = input_curves1
+
+            input_curves0 = curves
+            input_curves1 = curves2
+
+        ###############################################################################
+        # Create mesh of the bottom face
+        ###############################################################################
+
+        input_curves0 = project_curves_to_plane(input_curves0)
+        brep_0 = Rhino.Geometry.Brep.CreatePlanarBreps(input_curves0, Rhino.RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0]
+
+        input_curves1 = project_curves_to_plane(input_curves1)
+        brep_1 = Rhino.Geometry.Brep.CreatePlanarBreps(input_curves1, Rhino.RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0]
+
+        ###############################################################################
+        # Create lofts
+        ###############################################################################
+        breps_to_join = [brep_0, brep_1]
+        for i in range(len(input_curves0)):
+            wall = Rhino.Geometry.Brep.CreateFromLoft(
+                [input_curves0[i], input_curves1[i]],
+                Rhino.Geometry.Point3d.Unset,
+                Rhino.Geometry.Point3d.Unset,
+                Rhino.Geometry.LoftType.Normal,
+                False,
+            )[0]
+            breps_to_join.append(wall)
+
+        ###############################################################################
+        # Join Brep
+        ###############################################################################
+
+        solid = Rhino.Geometry.Brep.JoinBreps(breps_to_join, Rhino.RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0]
+
+        faces = []
+        for i in range(solid.Faces.Count):
+            faces.append(solid.Faces[i].DuplicateFace(False))
+
+        solid = Rhino.Geometry.Brep.JoinBreps(faces, Rhino.RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)[0]
+
+        if solid:
+            solid.Faces.SplitKinkyFaces(Rhino.RhinoMath.DefaultAngleTolerance, True)
+
+            if Rhino.Geometry.BrepSolidOrientation.Inward is solid.SolidOrientation:
+                solid.Flip()
+
+        if color is not None:
+            for i in range(solid.Faces.Count):
+                solid.Faces[i].PerFaceColor = color
+        else:
+            for i in range(solid.Faces.Count):
+                if i < 2:
+                    solid.Faces[i].PerFaceColor = System.Drawing.Color.LightGray  # Color.LightGray
+                else:
+                    solid.Faces[i].PerFaceColor = System.Drawing.Color.DeepPink
+
+        return solid
+
 
     ######################################################################
     # Create and Element with User Strings Attributes
@@ -626,6 +777,12 @@ class Element:
         obj.Attributes.SetUserString(
             "neighbours", str(neighbours) if neighbours else "-"
         )
+
+        # pair-index
+        obj.Attributes.SetUserString("pair_indices", "-")
+
+        # pair-neighbors
+        obj.Attributes.SetUserString("pair_neighbours", "-")
 
         # features - this attribute can be missing when nothing is assigned
         for idx, feature in enumerate(features):
