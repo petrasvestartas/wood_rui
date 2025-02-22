@@ -176,6 +176,7 @@ class Element:
     @features.setter
     def features(self, value):
         self.clear_features()
+        
         feature_count = self.features_count
         self._features = value
         attributes = self.geometry_plane[0].Attributes.Duplicate()
@@ -637,6 +638,150 @@ class Element:
                     solid.Faces[i].PerFaceColor = System.Drawing.Color.DeepPink
 
         return solid
+    
+    @staticmethod
+    def closest_axis(
+        elements: list["Element"],
+        distance: float,
+        display_plane: bool,
+        display_line: bool,
+    ) -> None:
+
+        ###############################################################################
+        # Extract axes and radii
+        ###############################################################################
+        curves : list[Rhino.Geometry.NurbsCurve] = []
+        radii : list[float]= []
+        for idx, element in enumerate(elements):
+            curves.append(element.axes[0].ToNurbsCurve())
+            radii.append(max(element.radii[0]))
+
+        ###############################################################################
+        # Run the closest point search
+        ###############################################################################
+        bboxes = []
+        for idx, c in enumerate(curves):
+            bbox: Rhino.Geometry.BoundingBox = c.GetBoundingBox(True)
+            bbox.Inflate(radii[idx] + 0.02)
+            bboxes.append(bbox)
+
+        # create a tree
+        rtree = Rhino.Geometry.RTree()
+
+        # fill the tree
+        for idx, bbox in enumerate(bboxes):
+            rtree.Insert(bbox, idx)
+
+        # call_backs of rtree
+        def search_callback(sender, rtree_event_args):
+            data_by_reference.append(rtree_event_args.Id)
+
+        neighbours: list[list[int, int]] = []
+        planes = []
+        lines = []
+
+        # Add Empty Layer and Delete everything from it.
+        wood_rui.add_sub_layer(
+            elements[0].geometry_plane[0],
+            "nearest_axis",
+            [],
+            [System.Drawing.Color.Blue],
+            True,
+            True,
+        )
+
+        # perform search
+        for i in range(len(bboxes)):
+            data_by_reference = []
+            if rtree.Search(bboxes[i], search_callback, data_by_reference):
+                for j in data_by_reference:
+                    if j <= i:
+                        continue
+                    result, p0, p1 = curves[i].ClosestPoints(curves[j])
+
+                    if p0.DistanceTo(p1) < distance:
+                        neighbours.append([i, j])
+
+                        # Check if elements are parallel and they are lines
+                        line0 = Rhino.Geometry.Line(
+                            curves[i].PointAtStart, curves[i].PointAtEnd
+                        )
+                        line1 = Rhino.Geometry.Line(
+                            curves[j].PointAtStart, curves[j].PointAtEnd
+                        )
+                        if (
+                            abs(
+                                line0.Direction.IsParallelTo(
+                                    line1.Direction,
+                                    Rhino.RhinoDoc.ActiveDoc.ModelAngleToleranceRadians,
+                                )
+                            )
+                            == 1
+                        ):
+                            p0 = line0.PointAt(0.5)
+                            p1 = line1.ClosestPoint(p0, True)
+
+                        # Create plane from the closest lines and adjacent axes.
+                        origin = (p0 + p1) * 0.5
+                        z_axis = p1 - p0
+                        if Rhino.Geometry.Vector3d.VectorAngle(
+                            line1.Direction, -line0.Direction
+                        ) > Rhino.Geometry.Vector3d.VectorAngle(
+                            line0.Direction, -line1.Direction
+                        ):
+                            line1 = Rhino.Geometry.Line(
+                                curves[j].PointAtEnd, curves[j].PointAtStart
+                            )
+
+                        y_axis = line0.Direction + line1.Direction
+                        x_axis = Rhino.Geometry.Vector3d.CrossProduct(z_axis, y_axis)
+                        plane = Rhino.Geometry.Plane(origin, x_axis, y_axis)
+
+                        if (origin + plane.ZAxis).DistanceTo(p1) > (
+                            origin - plane.ZAxis
+                        ).DistanceTo(p1):
+                            plane = Rhino.Geometry.Plane(origin, -x_axis, y_axis)
+
+                        planes.append(plane)
+
+                        # Display Intersection Line
+                        line = Rhino.Geometry.Line(p0, p1)
+                        lines.append(line)
+                        if display_plane:
+                            line0 = Rhino.Geometry.Line(
+                                plane.Origin, plane.XAxis * 100
+                            ).ToNurbsCurve()
+                            line1 = Rhino.Geometry.Line(
+                                plane.Origin, plane.YAxis * 100
+                            ).ToNurbsCurve()
+                            line2 = Rhino.Geometry.Line(
+                                plane.Origin, plane.ZAxis * 100
+                            ).ToNurbsCurve()
+                            plane_axes = [line0, line1, line2]
+                            wood_rui.add_sub_layer(
+                                elements[i].geometry_plane[0],
+                                "nearest_axis",
+                                plane_axes,
+                                [System.Drawing.Color.Red, System.Drawing.Color.Green, System.Drawing.Color.Blue],
+                                i == 0,
+                                True,
+                            )
+
+                        if display_line:
+                            wood_rui.add_sub_layer(
+                                elements[i].geometry_plane[0],
+                                "nearest_axis",
+                                [line.ToNurbsCurve()],
+                                [System.Drawing.Color.Blue],
+                                i == 0,
+                                True,
+                            )
+
+        ###############################################################################
+        # Output
+        ###############################################################################
+        return neighbours, planes, lines
+
 
 
     ######################################################################
