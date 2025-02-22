@@ -104,24 +104,59 @@ def add_polylines(
                 if obj:
                     obj.Attributes.LayerIndex = layer_index
 
-                    # polyline_guids.append(obj_guid)
-                    # obj.Attributes.SetUserString("element_id", str(int(idx * 0.5)))
-                    # obj.Attributes.SetUserString("dataset", data_name)
-                    # obj.Attributes.SetUserString("type", "polylines")
-
-                    # if group_indices and len(group_indices) > idx:
-                    #     obj.Attributes.SetUserString("group_index", str(group_indices[idx]))
                     obj.CommitChanges()
                 else:
                     pass
             else:
                 pass
 
-    # if "polylines_guid" in wood_rui_globals[data_name]:
-    # wood_rui_globals[data_name]["polylines_guid"] = polyline_guids
-    # wood_rui_globals[data_name]["polylines"] = polylines
+    Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw()  # 0 ms
 
-    # layer_index_dots = ensure_layer_exists("compas_wood", data_name, "joint_types", Color.MediumVioletRed)
+
+def add_polylines_dataset(polylines: List[Rhino.Geometry.Polyline], data_name: str, group_indices: List[int] = None) -> None:
+    """Add a list of polylines to the specified layer and return their GUIDs.
+
+    Parameters
+    ----------
+    foldername : List[Rhino.Geometry.Polyline]
+        List of polylines.
+    filename_of_dataset : str
+        Name of dataset.
+
+    """
+
+    print("add_polylines", data_name)
+
+    layer_index = ensure_layer_exists("compas_wood", data_name, "polylines", Color.DodgerBlue)
+
+    polyline_guids = []
+    for idx, polyline in enumerate(polylines):
+        if polyline:
+            obj_guid = Rhino.RhinoDoc.ActiveDoc.Objects.AddCurve(polyline.ToNurbsCurve())
+            if obj_guid:
+                obj = Rhino.RhinoDoc.ActiveDoc.Objects.Find(obj_guid)
+                if obj:
+                    obj.Attributes.LayerIndex = layer_index
+
+                    polyline_guids.append(obj_guid)
+                    obj.Attributes.SetUserString("element_id", str(int(idx * 0.5)))
+                    obj.Attributes.SetUserString("dataset", data_name)
+                    obj.Attributes.SetUserString("type", "polylines")
+
+                    if group_indices and len(group_indices) > idx:
+                        obj.Attributes.SetUserString("group_index", str(group_indices[idx]))
+                    obj.CommitChanges()
+                else:
+                    pass
+            else:
+                pass
+
+    if "polylines_guid" in wood_rui_globals[data_name]:
+        delete_objects(wood_rui_globals[data_name]["polylines_guid"])
+    wood_rui_globals[data_name]["polylines_guid"] = polyline_guids
+    wood_rui_globals[data_name]["polylines"] = polylines
+
+    layer_index_dots = ensure_layer_exists("compas_wood", data_name, "joint_types", Color.MediumVioletRed)
     Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw()  # 0 ms
 
 
@@ -330,6 +365,7 @@ def add_joinery(joinery: list[list[Rhino.Geometry.Polyline]], data_name: str) ->
     # Hide all child layers except the 'joinery' layer
     # hide_non_joinery_layers(plugin_name, data_name, "joinery")
     Rhino.RhinoDoc.ActiveDoc.Views.ActiveView.Redraw()  # 0 ms
+
 
 
 def add_joint_type(joints_per_face: list[list[int]], data_name: str) -> None:

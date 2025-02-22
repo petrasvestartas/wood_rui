@@ -7,6 +7,7 @@ from .layer import (
 from .object import (
     delete_objects,
     add_polylines,
+    add_polylines_dataset,
     add_mesh,
     add_insertion_lines,
     add_adjacency,
@@ -23,7 +24,7 @@ from .object import (
 from .globals import wood_rui_globals
 from .forms import NamedValuesForm, BooleanForm
 from .command import (
-    generalized_input_method,
+    process_input,
     handle_string_input,
     handle_numbers_input,
     handle_integers_input,
@@ -50,6 +51,7 @@ __all__ = [
     "add_sub_layer",
     "delete_objects",
     "add_polylines",
+    "add_polylines_dataset",
     "add_mesh",
     "add_insertion_lines",
     "wood_rui_globals",
@@ -63,7 +65,7 @@ __all__ = [
     "add_three_valence",
     "NamedValuesForm",
     "BooleanForm",
-    "generalized_input_method",
+    "process_input",
     "add_axes",
     "add_skeleton",
     "handle_string_input",

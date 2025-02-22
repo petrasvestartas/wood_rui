@@ -16,6 +16,8 @@ class Globals(object):
     ]  # temporary parameter that must go from compas_wood.binding import wood_globals
     three_valence = []  # temporary parameter that must go from compas_wood.binding import wood_globals
     adjacency = []  # temporary parameter that must go from compas_wood.binding import wood_globals
+    dowel_radius = 10.0  # temporary parameter that must go from compas_wood.binding import wood_globals
+    loft = True # temporary parameter that must go from compas_wood.binding import wood_globals
 
     def __new__(cls, plugin_name="compas_wood"):
         """Ensure that only one instance per plugin exists."""

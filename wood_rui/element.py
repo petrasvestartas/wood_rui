@@ -111,7 +111,10 @@ class Element:
 
     @property
     def pair_indices(self):
-        return ast.literal_eval(self.geometry_plane[0].Attributes.GetUserString("pair_indices"))
+        try:
+            return ast.literal_eval(self.geometry_plane[0].Attributes.GetUserString("pair_indices"))
+        except:
+            return []
 
     @pair_indices.setter
     def pair_indices(self, value):
@@ -121,8 +124,11 @@ class Element:
 
     @property
     def neighbours(self):
-        value = self.geometry_plane[0].Attributes.GetUserString("neighbours")
-        return ast.literal_eval(value)
+        try:
+            value = self.geometry_plane[0].Attributes.GetUserString("neighbours")
+            return ast.literal_eval(value)
+        except:
+            return []
 
     @neighbours.setter
     def neighbours(self, value):
@@ -132,8 +138,11 @@ class Element:
 
     @property
     def pair_neighbours(self):
-        value = self.geometry_plane[0].Attributes.GetUserString("pair_neighbours")
-        return ast.literal_eval(value)
+        try:
+            value = self.geometry_plane[0].Attributes.GetUserString("pair_neighbours")
+            return ast.literal_eval(value)
+        except: 
+            return []
 
     @pair_neighbours.setter
     def pair_neighbours(self, value):
@@ -181,7 +190,7 @@ class Element:
         Rhino.RhinoDoc.ActiveDoc.Objects.ModifyAttributes(
             self.geometry_plane[0], attributes, False
         )
-        obj.CommitChanges()
+        self.geometry_plane[0].CommitChanges()
 
     def clear_features(self):
         attributes = self.geometry_plane[0].Attributes.Duplicate()
@@ -197,7 +206,10 @@ class Element:
     @property
     def pair_polyline(self):
         value = self.geometry_plane[0].Attributes.GetUserString("pair_polyline")
-        list3 = ast.literal_eval(value)
+        try:
+            list3 = ast.literal_eval(value)
+        except (ValueError, SyntaxError):
+            return []
 
         # convert triple nested lists to polylines
         polylines_list = []
@@ -634,7 +646,7 @@ class Element:
     @staticmethod
     def add_element(
         shape: Union[Rhino.Geometry.Brep, Rhino.Geometry.Mesh],
-        layer_name: str = "my_model",
+        layer_name: str = "default",
         name: str = "beam",
         index: int = -1,
         neighbours: list[int] = [],
@@ -691,7 +703,7 @@ class Element:
         layer_index = wood_rui.ensure_layer_exists(
             "compas_wood",
             layer_name,
-            name,
+            "shape",
             System.Drawing.Color.FromArgb(255, 30, 144, 255),
         )
 

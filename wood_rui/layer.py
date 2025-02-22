@@ -5,12 +5,15 @@ from System.Drawing import Color  # Import Color from System.Drawing
 from Rhino import RhinoMath
 
 
+
+
 def add_sub_layer(
     layer_index_or_rhino_object: Union[int, Rhino.DocObjects.RhinoObject],
     sub_layer_name: str,
     geometries: list[any],
     colors: list[Color] = None,
     delete_existing: bool = False,
+    use_parent = True,
 ) -> int:
     """Add geometry to a sub-layer of the specified layer.
 
@@ -22,10 +25,12 @@ def add_sub_layer(
         The name of the sub-layer.
     geometry : any
         The geometry to add to the sub-layer.
-    color : Color, optional
-        The color of the sub-layer.
+    colors : list[Color], optional
+        The color of the sub-layer and objects.
     delete_existing : bool, optional
         True to delete existing objects in the sub-layer.
+    user_parent : bool, optional
+        True to use the parent layer as the parent of the sub-layer.
 
     """
 
@@ -39,6 +44,15 @@ def add_sub_layer(
     if layer_index == -1:
         print("Layer not found. No object is added to rhino.")
         return
+    
+    
+    # Use parent layer if specified
+    if use_parent:
+        parent_layer_id = Rhino.RhinoDoc.ActiveDoc.Layers[layer_index].ParentLayerId
+        if parent_layer_id != System.Guid.Empty:
+            parent_layer = Rhino.RhinoDoc.ActiveDoc.Layers.FindId(parent_layer_id)
+            if parent_layer:
+                layer_index = parent_layer.Index        
 
     # Now create the full path for the case (second-level) layer
     new_layer_name = (
@@ -53,7 +67,7 @@ def add_sub_layer(
         layer = Rhino.DocObjects.Layer()
         layer.Name = sub_layer_name
         layer.ParentLayerId = Rhino.RhinoDoc.ActiveDoc.Layers[layer_index].Id
-        layer.Color = System.Drawing.Color.Black
+        layer.Color = colors[0] if colors else System.Drawing.Color.Black
         new_layer_index = Rhino.RhinoDoc.ActiveDoc.Layers.Add(layer)
 
     if delete_existing:
@@ -70,8 +84,8 @@ def add_sub_layer(
             attributes = obj.Attributes.Duplicate()
             attributes.LayerIndex = new_layer_index
 
-            if colors:
-                attributes.ObjectColor = colors[idx % len(colors)]
+            if len(colors) > 0:
+                attributes.ObjectColor = colors[idx%len(colors)] if len(colors) > 1 else Color.Black
                 attributes.ColorSource = (
                     Rhino.DocObjects.ObjectColorSource.ColorFromObject
                 )
