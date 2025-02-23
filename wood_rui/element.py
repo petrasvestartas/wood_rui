@@ -645,6 +645,7 @@ class Element:
         distance: float,
         display_plane: bool,
         display_line: bool,
+        intersection : bool,
     ) -> None:
 
         ###############################################################################
@@ -741,6 +742,39 @@ class Element:
                             origin - plane.ZAxis
                         ).DistanceTo(p1):
                             plane = Rhino.Geometry.Plane(origin, -x_axis, y_axis)
+
+                        
+
+                        # If boolean intersection is used plane can be recentered based on the shape
+                        if intersection:
+                            brep0 = elements[i].shape
+                            brep1 = elements[j].shape
+                            result = Rhino.Geometry.Brep.CreateBooleanIntersection(brep0, brep1, Rhino.RhinoDoc.ActiveDoc.ModelAbsoluteTolerance)
+
+
+                            if len(result) > 0:
+                                
+                                # no_oriented_brep = result[0].DuplicateBrep()
+                                T = Rhino.Geometry.Transform.PlaneToPlane(plane, Rhino.Geometry.Plane.WorldXY)
+                                result[0].Transform(T)
+                                bbox = result[0].GetBoundingBox(True)
+
+                                plane_from_intersection = Rhino.Geometry.Plane(
+                                    bbox.Center,
+                                    Rhino.Geometry.Vector3d.XAxis,
+                                    Rhino.Geometry.Vector3d.YAxis
+                                )
+                                plane_from_intersection.Transform(Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, plane))
+                                plane = plane_from_intersection
+
+                                wood_rui.add_sub_layer(
+                                    elements[i].geometry_plane[0],
+                                    "nearest_axis_intersection",
+                                    [result[0], bbox.ToBrep()],
+                                    [System.Drawing.Color.Blue],
+                                    i == 0,
+                                    True,
+                                )
 
                         planes.append(plane)
 
